@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "utils.h"
+#include "enums.h"
 
 #include "Textures/AllTextures.ppm"
 #include "Textures/sky.ppm"
@@ -14,7 +15,6 @@
 
 using namespace std;
 
-float px, py, pdx, pdy, pa;
 float frame1, frame2, fps;
 int gameState = 0, timer = 0;
 float fade = 0;
@@ -66,7 +66,25 @@ public:
     bool red, blue, yellow, green;
 };
 
+class Player
+{
+private:
+    int health;
+public:
+    float px, py, pdx, pdy, pa;
+
+    int damage(int dmg, DMG dmgType)
+    {
+        if (this->health > 0)
+        {
+            // TODO: death
+            gameState = 4;
+        }
+    }
+};
+
 PlayerKeys MyKeys;
+Player player;
 
 class ButtonKeys
 {
@@ -84,12 +102,12 @@ public:
         if (key == 's') { this->s = true; }
         if (key == 'e' && MyKeys.white == true)
         {
-            int xo = 0; if (pdx < 0) { xo = -25; }
+            int xo = 0; if (player.pdx < 0) { xo = -25; }
             else { xo = 25; }
-            int yo = 0; if (pdy < 0) { yo = -25; }
+            int yo = 0; if (player.pdy < 0) { yo = -25; }
             else { yo = 25; }
-            int ipx = px / 64.0, ipx_add_xo = (px + xo) / 64.0;
-            int ipy = py / 64.0, ipy_add_yo = (py + yo) / 64.0;
+            int ipx = player.px / 64.0, ipx_add_xo = (player.px + xo) / 64.0;
+            int ipy = player.py / 64.0, ipy_add_yo = (player.py + yo) / 64.0;
             if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 3) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
         }
         if (key == ' ') { this->space = true; }
@@ -209,13 +227,6 @@ public:
 };
 PlayerGun gun;
 
-class Player
-{
-public:
-    int health;
-};
-Player player;
-
 Sprite makeSprite(int type, int state, int texture, float x, float y, float z)
 {
     Sprite tSprite;
@@ -236,7 +247,7 @@ bool spriteLogic(Sprite &sprite)
 
     switch (sprite.type) {
     case 1:
-        if (px<sprite.x + 30 && px>sprite.x - 30 && py<sprite.y + 30 && py>sprite.y - 30)
+        if (player.px<sprite.x + 30 && player.px>sprite.x - 30 && player.py<sprite.y + 30 && player.py>sprite.y - 30)
         {
             sprite.state = 0;
             MyKeys.white = true;
@@ -253,12 +264,12 @@ bool spriteLogic(Sprite &sprite)
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
         int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
-        if (sprite.x > px && mapW[spy * 8 + spx_sub] == 0) { sprite.x -= 0.04 * fps; }
-        if (sprite.x < px && mapW[spy * 8 + spx_add] == 0) { sprite.x += 0.04 * fps; }
-        if (sprite.y > py && mapW[spy_sub * 8 + spx] == 0) { sprite.y -= 0.04 * fps; }
-        if (sprite.y < py && mapW[spy_add * 8 + spx] == 0) { sprite.y += 0.04 * fps; }
+        if (sprite.x > player.px && mapW[spy * 8 + spx_sub] == 0) { sprite.x -= 0.04 * fps; }
+        if (sprite.x < player.px && mapW[spy * 8 + spx_add] == 0) { sprite.x += 0.04 * fps; }
+        if (sprite.y > player.py && mapW[spy_sub * 8 + spx] == 0) { sprite.y -= 0.04 * fps; }
+        if (sprite.y < player.py && mapW[spy_add * 8 + spx] == 0) { sprite.y += 0.04 * fps; }
 
-        if (px<sprite.x + 30 && px>sprite.x - 30 && py<sprite.y + 30 && py>sprite.y - 30)
+        if (player.px<sprite.x + 30 && player.px>sprite.x - 30 && player.py<sprite.y + 30 && player.py>sprite.y - 30)
             gameState = 4;
 
         break;
@@ -285,11 +296,11 @@ void drawSprites()
         {
             for (s = 0;s < 4;s++)
             {
-                float sx = sp.x - px;
-                float sy = sp.y - py;
+                float sx = sp.x - player.px;
+                float sy = sp.y - player.py;
                 float sz = sp.z;
 
-                float CS = cos(degToRad(pa)), SN = sin(degToRad(pa));
+                float CS = cos(degToRad(player.pa)), SN = sin(degToRad(player.pa));
                 float a = sy * CS + sx * SN;
                 float b = sx * CS - sy * SN;
                 sx = a; sy = b;
@@ -372,7 +383,7 @@ void drawRays2D()
     int r, mx, my, mp, dof, side;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH;
 
-    ra = FixAng(pa + 30);
+    ra = FixAng(player.pa + 30);
 
     for (r = 0;r < 120;r++)
     {
@@ -380,14 +391,14 @@ void drawRays2D()
         //---Vertical--- 
         dof = 0; side = 0; disV = 100000;
         float Tan = tan(degToRad(ra));
-        if (cos(degToRad(ra)) > 0.001) { rx = (((int)px >> 6) << 6) + 64;      ry = (px - rx) * Tan + py; xo = 64; yo = -xo * Tan; }
-        else if (cos(degToRad(ra)) < -0.001) { rx = (((int)px >> 6) << 6) - 0.0001; ry = (px - rx) * Tan + py; xo = -64; yo = -xo * Tan; }
-        else { rx = px; ry = py; dof = 8; }
+        if (cos(degToRad(ra)) > 0.001) { rx = (((int)player.px >> 6) << 6) + 64;      ry = (player.px - rx) * Tan + player.py; xo = 64; yo = -xo * Tan; }
+        else if (cos(degToRad(ra)) < -0.001) { rx = (((int)player.px >> 6) << 6) - 0.0001; ry = (player.px - rx) * Tan + player.py; xo = -64; yo = -xo * Tan; }
+        else { rx = player.px; ry = player.py; dof = 8; }
 
         while (dof < 8)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - px) - sin(degToRad(ra)) * (ry - py); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.px) - sin(degToRad(ra)) * (ry - player.py); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
         vx = rx; vy = ry;
@@ -395,14 +406,14 @@ void drawRays2D()
         //---Horizontal---
         dof = 0; disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(degToRad(ra)) > 0.001) { ry = (((int)py >> 6) << 6) - 0.0001; rx = (py - ry) * Tan + px; yo = -64; xo = -yo * Tan; }
-        else if (sin(degToRad(ra)) < -0.001) { ry = (((int)py >> 6) << 6) + 64;      rx = (py - ry) * Tan + px; yo = 64; xo = -yo * Tan; }
-        else { rx = px; ry = py; dof = 8; }
+        if (sin(degToRad(ra)) > 0.001) { ry = (((int)player.py >> 6) << 6) - 0.0001; rx = (player.py - ry) * Tan + player.px; yo = -64; xo = -yo * Tan; }
+        else if (sin(degToRad(ra)) < -0.001) { ry = (((int)player.py >> 6) << 6) + 64;      rx = (player.py - ry) * Tan + player.px; yo = 64; xo = -yo * Tan; }
+        else { rx = player.px; ry = player.py; dof = 8; }
 
         while (dof < 8)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - px) - sin(degToRad(ra)) * (ry - py); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.px) - sin(degToRad(ra)) * (ry - player.py); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
 
@@ -410,7 +421,7 @@ void drawRays2D()
         glColor3f(0, 0.8, 0);
         if (disV < disH) { hmt = vmt; shade = 0.5; rx = vx; ry = vy; disH = disV; glColor3f(0, 0.6, 0); }
 
-        int ca = FixAng(pa - ra); disH = disH * cos(degToRad(ca));
+        int ca = FixAng(player.pa - ra); disH = disH * cos(degToRad(ca));
         int lineH = (mapS * 640) / (disH);
         float ty_step = 32.0 / (float)lineH;
         float ty_off = 0;
@@ -437,9 +448,9 @@ void drawRays2D()
         //---draw floors---
         for (y = lineOff + lineH;y < 640;y++)
         {
-            float dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(pa - ra)));
-            tx = px / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
-            ty = py / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
+            float dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.pa - ra)));
+            tx = player.px / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
+            ty = player.py / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
             int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
             int pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
             int red = AllTextures[pixel + 0] * 0.7;
@@ -467,7 +478,7 @@ void drawSky()
     {
         for (x = 0;x < 120;x++)
         {
-            int xo = (int)pa * 2 - x; if (xo < 0) { xo += 120; } xo = xo % 120;
+            int xo = (int)player.pa * 2 - x; if (xo < 0) { xo += 120; } xo = xo % 120;
             int pixel = (y * 120 + xo) * 3;
             int red = sky[pixel + 0];
             int green = sky[pixel + 1];
@@ -502,8 +513,8 @@ void screen(int v)
 void init()
 {
     glClearColor(0.3, 0.3, 0.3, 0);
-    px = 150; py = 400; pa = 90;
-    pdx = cos(degToRad(pa)); pdy = -sin(degToRad(pa));
+    player.px = 150; player.py = 400; player.pa = 90;
+    player.pdx = cos(degToRad(player.pa)); player.pdy = -sin(degToRad(player.pa));
     mapW[19] = 4; mapW[26] = 4;
     MyKeys.white = false;
 
@@ -527,30 +538,30 @@ void init()
 
 void movement()
 {
-    if (Keys.a) { pa += 0.2 * fps; pa = FixAng(pa); pdx = cos(degToRad(pa)); pdy = -sin(degToRad(pa)); }
-    if (Keys.d) { pa -= 0.2 * fps; pa = FixAng(pa); pdx = cos(degToRad(pa)); pdy = -sin(degToRad(pa)); }
+    if (Keys.a) { player.pa += 0.2 * fps; player.pa = FixAng(player.pa); player.pdx = cos(degToRad(player.pa));player.pdy = -sin(degToRad(player.pa)); }
+    if (Keys.d) { player.pa -= 0.2 * fps; player.pa = FixAng(player.pa); player.pdx = cos(degToRad(player.pa)); player.pdy = -sin(degToRad(player.pa)); }
 
-    int xo = 0; if (pdx < 0) { xo = -20; }
+    int xo = 0; if (player.pdx < 0) { xo = -20; }
     else { xo = 20; }
-    int yo = 0; if (pdy < 0) { yo = -20; }
+    int yo = 0; if (player.pdy < 0) { yo = -20; }
     else { yo = 20; }
-    int ipx = px / 64.0, ipx_add_xo = (px + xo) / 64.0, ipx_sub_xo = (px - xo) / 64.0;
-    int ipy = py / 64.0, ipy_add_yo = (py + yo) / 64.0, ipy_sub_yo = (py - yo) / 64.0;
+    int ipx = player.px / 64.0, ipx_add_xo = (player.px + xo) / 64.0, ipx_sub_xo = (player.px - xo) / 64.0;
+    int ipy = player.py / 64.0, ipy_add_yo = (player.py + yo) / 64.0, ipy_sub_yo = (player.py - yo) / 64.0;
     if (Keys.w)
     {
-        if (mapW[ipy * mapX + ipx_add_xo] == 0) { px += pdx * 0.2 * fps; }
-        if (mapW[ipy_add_yo * mapX + ipx] == 0) { py += pdy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_add_xo] == 0) { player.px += player.pdx * 0.2 * fps; }
+        if (mapW[ipy_add_yo * mapX + ipx] == 0) { player.py += player.pdy * 0.2 * fps; }
     }
     if (Keys.s)
     {
-        if (mapW[ipy * mapX + ipx_sub_xo] == 0) { px -= pdx * 0.2 * fps; }
-        if (mapW[ipy_sub_yo * mapX + ipx] == 0) { py -= pdy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_sub_xo] == 0) { player.px -= player.pdx * 0.2 * fps; }
+        if (mapW[ipy_sub_yo * mapX + ipx] == 0) { player.py -= player.pdy * 0.2 * fps; }
     }
 }
 
 void checkWin()
 {
-    if ((int)px >> 6 == 1 && (int)py >> 6 == 1)
+    if ((int)player.px >> 6 == 1 && (int)player.py >> 6 == 1)
     {
         fade = 0;
         timer = 0;

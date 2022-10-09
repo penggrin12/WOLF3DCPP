@@ -3,7 +3,7 @@
 #include <math.h>
 #include <vector>
 
-#include "Textures/All_Textures.ppm"
+#include "Textures/AllTextures.ppm"
 #include "Textures/sky.ppm"
 #include "Textures/title.ppm"
 #include "Textures/won.ppm"
@@ -22,23 +22,6 @@ float px, py, pdx, pdy, pa;
 float frame1, frame2, fps;
 int gameState = 0, timer = 0;
 float fade = 0;
-
-struct ButtonKeys
-{
-    bool w, a, d, s;
-    bool space, lmb;
-    bool moving(void) { return ((w != 0) || (s != 0) || (a != 0) || (d != 0)); }
-    bool shooting(void) { return ((space) || (lmb)); }
-};
-
-struct PlayerKeys
-{
-    bool white;
-    bool red, blue, yellow, green;
-};
-
-ButtonKeys Keys;
-PlayerKeys MyKeys;
 
 #define mapX  8
 #define mapY  8
@@ -80,9 +63,60 @@ int mapC[] =
  0,0,0,0,0,0,0,0,
 };
 
-
-struct Sprite
+class PlayerKeys
 {
+public:
+    bool white;
+    bool red, blue, yellow, green;
+};
+
+PlayerKeys MyKeys;
+
+class ButtonKeys
+{
+public:
+    bool w, a, d, s;
+    bool space, lmb;
+    bool moving(void) { return ((w != 0) || (s != 0) || (a != 0) || (d != 0)); }
+    bool shooting(void) { return ((space) || (lmb)); }
+
+    void ButtonDown(unsigned char key, int x, int y)
+    {
+        if (key == 'a') { this->a = true; }
+        if (key == 'd') { this->d = true; }
+        if (key == 'w') { this->w = true; }
+        if (key == 's') { this->s = true; }
+        if (key == 'e' && MyKeys.white == true)
+        {
+            int xo = 0; if (pdx < 0) { xo = -25; }
+            else { xo = 25; }
+            int yo = 0; if (pdy < 0) { yo = -25; }
+            else { yo = 25; }
+            int ipx = px / 64.0, ipx_add_xo = (px + xo) / 64.0;
+            int ipy = py / 64.0, ipy_add_yo = (py + yo) / 64.0;
+            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
+        }
+        if (key == ' ') { this->space = true; }
+
+        glutPostRedisplay();
+    }
+
+    void ButtonUp(unsigned char key, int x, int y)
+    {
+        if (key == 'a') { this->a = false; }
+        if (key == 'd') { this->d = false; }
+        if (key == 'w') { this->w = false; }
+        if (key == 's') { this->s = false; }
+        if (key == ' ') { this->space = false; }
+        glutPostRedisplay();
+    }
+};
+
+ButtonKeys Keys;
+
+class Sprite
+{
+public:
     int type;
     int state;
     int texture;
@@ -91,8 +125,9 @@ struct Sprite
 vector < Sprite > sprites(64);
 int depth[120];
 
-struct Gun
+class PlayerGun
 {
+public:
     float anim;
     float animSpeed;
     int type;
@@ -101,11 +136,82 @@ struct Gun
     int x, y;
     bool ready;
     bool ammo;
-};
-Gun gun;
 
-struct Player
+    void drawGun()
+    {
+        glPointSize(8);
+        for (int y = 0;y < 32;y++)
+        {
+            for (int x = 0;x < 32;x++)
+            {
+                //int pixel = (y * 32 + x) * 3;
+                int pixel = ((int)y * 32 + (int)x) * 3 + (this->texture * 32 * 32 * 3);
+                int red = spritesTextures[pixel + 0];
+                int green = spritesTextures[pixel + 1];
+                int blue = spritesTextures[pixel + 2];
+
+                if (red != 255, green != 0, blue != 255)
+                {
+                    glColor3ub(red, green, blue);
+                    glBegin(GL_POINTS);
+                    glVertex2i(((this->x + this->anim) + x) * 8, ((this->y + this->anim / 16.0) + y) * 8);
+                    glEnd();
+                }
+            }
+        }
+    }
+
+    void animateGun()
+    {
+        if (this->anim > 0.0)
+        {
+            if (this->anim > 3.0)
+            {
+                this->animSpeed = -0.25;
+            }
+        }
+        else
+        {
+            if (this->anim < -3.0)
+            {
+                this->animSpeed = 0.25;
+            }
+        }
+
+        if (Keys.moving() || (Keys.shooting() && ((this->animSpeed > 0.25) || (this->animSpeed < -0.25))))
+        {
+            this->anim += this->animSpeed;
+        }
+        else
+        {
+            this->anim = 0;
+            //this->animSpeed = 0;
+        }
+    }
+
+    void shakeGun()
+    {
+        if (this->animSpeed > 0)
+        {
+            this->animSpeed += 0.25;
+        }
+        else
+        {
+            this->animSpeed -= 0.25;
+        }
+    }
+
+    void shoot()
+    {
+        printf("shoot\n");
+        shakeGun();
+    }
+};
+PlayerGun gun;
+
+class Player
 {
+public:
     int health;
 };
 Player player;
@@ -253,81 +359,11 @@ void drawSprites2D()
 }
 */
 
-void drawGun()
-{
-    glPointSize(8);
-    for (int y = 0;y < 32;y++)
-    {
-        for (int x = 0;x < 32;x++)
-        {
-            //int pixel = (y * 32 + x) * 3;
-            int pixel = ((int)y * 32 + (int)x) * 3 + (gun.texture * 32 * 32 * 3);
-            int red = spritesTextures[pixel + 0];
-            int green = spritesTextures[pixel + 1];
-            int blue = spritesTextures[pixel + 2];
-
-            if (red != 255, green != 0, blue != 255)
-            {
-                glColor3ub(red, green, blue);
-                glBegin(GL_POINTS);
-                glVertex2i(((gun.x + gun.anim) + x) * 8, ((gun.y + gun.anim / 16.0) + y) * 8);
-                glEnd();
-            }
-        }
-    }
-}
-
-void animateGun()
-{
-    if (gun.anim > 0.0)
-    {
-        if (gun.anim > 3.0)
-        {
-            gun.animSpeed = -0.25;
-        }
-    }
-    else
-    {
-        if (gun.anim < -3.0)
-        {
-            gun.animSpeed = 0.25;
-        }
-    }
-
-    if (Keys.moving() || (Keys.shooting() && ((gun.animSpeed > 0.25) || (gun.animSpeed < -0.25))))
-    {
-        gun.anim += gun.animSpeed;
-    }
-    else
-    {
-        gun.anim = 0;
-        //gun.animSpeed = 0;
-    }
-}
-
-void shakeGun()
-{
-    if (gun.animSpeed > 0)
-    {
-        gun.animSpeed += 0.25;
-    }
-    else
-    {
-        gun.animSpeed -= 0.25;
-    }
-}
-
-void shoot()
-{
-    printf("shoot\n");
-    shakeGun();
-}
-
 void shooting()
 {
     if ((Keys.shooting()) && (gun.ready) && (gun.ammo > 0))
     {
-        shoot();
+        gun.shoot();
     }
 }
 
@@ -391,9 +427,9 @@ void drawRays2D()
         for (y = 0;y < lineH;y++)
         {
             int pixel = ((int)ty * 32 + (int)tx) * 3 + (hmt * 32 * 32 * 3);
-            int red = All_Textures[pixel + 0] * shade;
-            int green = All_Textures[pixel + 1] * shade;
-            int blue = All_Textures[pixel + 2] * shade;
+            int red = AllTextures[pixel + 0] * shade;
+            int green = AllTextures[pixel + 1] * shade;
+            int blue = AllTextures[pixel + 2] * shade;
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y + lineOff); glEnd();
             ty += ty_step;
         }
@@ -406,17 +442,17 @@ void drawRays2D()
             ty = py / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
             int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
             int pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
-            int red = All_Textures[pixel + 0] * 0.7;
-            int green = All_Textures[pixel + 1] * 0.7;
-            int blue = All_Textures[pixel + 2] * 0.7;
+            int red = AllTextures[pixel + 0] * 0.7;
+            int green = AllTextures[pixel + 1] * 0.7;
+            int blue = AllTextures[pixel + 2] * 0.7;
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y); glEnd();
 
             //---draw ceiling---
             mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
             pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
-            red = All_Textures[pixel + 0];
-            green = All_Textures[pixel + 1];
-            blue = All_Textures[pixel + 2];
+            red = AllTextures[pixel + 0];
+            green = AllTextures[pixel + 1];
+            blue = AllTextures[pixel + 2];
             if (mp > 0) { glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, 640 - y); glEnd(); }
         }
 
@@ -535,13 +571,13 @@ void display()
         movement();
         checkWin();
         shooting();
-        animateGun();
+        gun.animateGun();
 
         // drawing
         drawSky();
         drawRays2D();
         drawSprites();
-        drawGun();
+        gun.drawGun();
     }
 
     if (gameState == 3) { screen(2); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameState = 0; } } // win
@@ -551,41 +587,12 @@ void display()
     glutSwapBuffers();
 }
 
-void ButtonDown(unsigned char key, int x, int y)
-{
-    if (key == 'a') { Keys.a = true; }
-    if (key == 'd') { Keys.d = true; }
-    if (key == 'w') { Keys.w = true; }
-    if (key == 's') { Keys.s = true; }
-    if (key == 'e' && MyKeys.white == true)
-    {
-        int xo = 0; if (pdx < 0) { xo = -25; }
-        else { xo = 25; }
-        int yo = 0; if (pdy < 0) { yo = -25; }
-        else { yo = 25; }
-        int ipx = px / 64.0, ipx_add_xo = (px + xo) / 64.0;
-        int ipy = py / 64.0, ipy_add_yo = (py + yo) / 64.0;
-        if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
-    }
-    if (key == ' ') { Keys.space = true; }
+void resize(int w, int h) { glutReshapeWindow(960, 640); }
 
-    glutPostRedisplay();
-}
+// FIXME: avoid this?
+void ButtonDown(unsigned char key, int x, int y) { Keys.ButtonDown(key, x, y); }
 
-void ButtonUp(unsigned char key, int x, int y)
-{
-    if (key == 'a') { Keys.a = false; }
-    if (key == 'd') { Keys.d = false; }
-    if (key == 'w') { Keys.w = false; }
-    if (key == 's') { Keys.s = false; }
-    if (key == ' ') { Keys.space = false; }
-    glutPostRedisplay();
-}
-
-void resize(int w, int h)
-{
-    glutReshapeWindow(960, 640);
-}
+void ButtonUp(unsigned char key, int x, int y) { Keys.ButtonUp(key, x, y); }
 
 int main(int argc, char* argv[])
 {
@@ -596,10 +603,10 @@ int main(int argc, char* argv[])
     glutCreateWindow("");
     gluOrtho2D(0, 960, 640, 0);
     init();
-    glutDisplayFunc(display);
-    glutReshapeFunc(resize);
-    glutKeyboardFunc(ButtonDown);
-    glutKeyboardUpFunc(ButtonUp);
+    glutDisplayFunc(&display);
+    glutReshapeFunc(&resize);
+    glutKeyboardFunc(&ButtonDown);
+    glutKeyboardUpFunc(&ButtonUp);
     glutMainLoop();
 }
 

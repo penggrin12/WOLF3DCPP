@@ -9,3 +9,9 @@ enum DMG
 	DMG_EXPLOSION,
 	DMG_LAVA,
 };
+
+enum TEAM
+{
+	TEAM_PLAYER = 0,
+	TEAM_MONSTER,
+};

@@ -135,9 +135,37 @@ public:
     int state;
     int texture;
     float x, y, z;
+    float dx, dy;
+
+    void think() {}
 };
-vector < Sprite > sprites(64);
+vector < Sprite > sprites(32);
 int depth[120];
+
+class Bullet: public Sprite
+{
+public:
+    float a;
+    float dx, dy;
+    float speed;
+    DMG dmgType;
+    TEAM owner;
+
+    void make(float x, float y, float a, DMG dmgType, TEAM owner)
+    {
+        this->type = 4; this->state = 1; this->texture = 1;
+        this->dmgType = dmgType;
+        this->owner = owner;
+
+        this->x = x; this->y = y; this->a = a;
+        this->dx = cos(degToRad(a)); this->dy = -sin(degToRad(a));
+    }
+
+    void think()
+    {
+        
+    }
+};
 
 class PlayerGun
 {
@@ -218,8 +246,34 @@ public:
 
     void shoot()
     {
+        // FIXME: я нифига не понимаю
+        //        оно не хочет отображаться (или даже в sprites помещаться)
+
+        // FIXME: я понял в чем прикол...
+        //        пуля была слишком высоко, её небыло видно.....
+        //        теперь нужно почистить код
         printf("shoot\n");
+
+        Sprite tBullet;
+        
+        tBullet.type = 4; tBullet.state = 1; tBullet.texture = 1;
+
+        tBullet.x = player.px;
+        tBullet.y = player.py;
+        tBullet.z = 20;
+        tBullet.dx = player.pdx;
+        tBullet.dy = player.pdy;
+        /*tBullet.a = player.pa;
+        tBullet.owner = TEAM_PLAYER;
+        tBullet.dmgType = DMG_BULLET;*/
+        
+        //tBullet.make(player.px, player.py, player.pa, DMG_BULLET, TEAM_PLAYER);
+        sprites.push_back(tBullet);
+
+        //printf("%s \n", tBullet.type);
+
         shakeGun();
+
         this->shootAnimTimer = 10;
         this->texture = 4;
         this->ready = false;
@@ -261,6 +315,7 @@ bool spriteLogic(Sprite &sprite)
     case 2:
         break;
     case 3:
+    {
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
         int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
@@ -272,6 +327,13 @@ bool spriteLogic(Sprite &sprite)
         if (player.px<sprite.x + 30 && player.px>sprite.x - 30 && player.py<sprite.y + 30 && player.py>sprite.y - 30)
             gameState = 4;
 
+        break;
+    }
+    case 4:
+        sprite.x += sprite.dx * 0.15 * fps;
+        sprite.y += sprite.dy * 0.15 * fps;
+        break;
+    default:
         break;
     }
 

@@ -1,5 +1,3 @@
-#pragma once
-
 int AllTextures[]=
 {
 48,

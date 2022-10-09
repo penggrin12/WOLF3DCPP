@@ -3,6 +3,8 @@
 #include <math.h>
 #include <vector>
 
+#include "utils.h"
+
 #include "Textures/AllTextures.ppm"
 #include "Textures/sky.ppm"
 #include "Textures/title.ppm"
@@ -10,14 +12,8 @@
 #include "Textures/lost.ppm"
 #include "Textures/sprites.ppm"
 
-#define M_PI   3.1415926
-#define degToRad(angleInDegrees) ((angleInDegrees) * M_PI / 180.0)
-#define radToDeg(angleInRadians) ((angleInRadians) * 180.0 / M_PI)
-
 using namespace std;
 
-float FixAng(float a) { if (a > 359) { a -= 360; } if (a < 0) { a += 360; } return a; }
-float distance(float ax, float ay, float bx, float by, float ang) { return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay); }
 float px, py, pdx, pdy, pa;
 float frame1, frame2, fps;
 int gameState = 0, timer = 0;
@@ -30,9 +26,9 @@ float fade = 0;
 int mapW[] =
 {
  1,1,1,1,2,2,2,2,
- 6,0,0,1,0,0,0,2,
- 1,0,0,4,0,2,0,2,
- 1,5,4,5,0,0,0,2,
+ 4,0,0,1,0,0,0,2,
+ 1,0,0,3,0,1,0,2,
+ 1,1,3,1,0,0,0,2,
  2,0,0,0,0,0,0,1,
  2,0,0,0,0,1,0,1,
  2,0,0,0,0,0,0,1,
@@ -42,12 +38,12 @@ int mapW[] =
 int mapF[] =
 {
  0,0,0,0,0,0,0,0,
- 0,0,0,0,2,2,2,0,
- 0,0,0,0,6,0,2,0,
- 0,0,8,0,2,7,6,0,
- 0,0,2,0,0,0,0,0,
- 0,0,2,0,8,0,0,0,
- 0,1,1,1,1,0,8,0,
+ 0,0,0,0,1,1,1,0,
+ 0,0,0,0,1,0,1,0,
+ 0,0,8,0,1,2,1,0,
+ 0,0,1,0,0,0,0,0,
+ 0,0,1,0,1,0,0,0,
+ 0,1,1,1,1,0,2,0,
  0,0,0,0,0,0,0,0,
 };
 
@@ -57,9 +53,9 @@ int mapC[] =
  0,0,0,0,0,0,0,0,
  0,0,0,0,0,0,0,0,
  0,0,0,0,0,0,0,0,
- 0,4,2,4,0,0,0,0,
- 0,0,2,0,0,0,0,0,
- 0,0,2,0,0,0,0,0,
+ 0,1,1,1,0,0,0,0,
+ 0,0,1,0,0,0,0,0,
+ 0,0,1,0,0,0,0,0,
  0,0,0,0,0,0,0,0,
 };
 
@@ -94,7 +90,7 @@ public:
             else { yo = 25; }
             int ipx = px / 64.0, ipx_add_xo = (px + xo) / 64.0;
             int ipy = py / 64.0, ipy_add_yo = (py + yo) / 64.0;
-            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
+            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 3) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
         }
         if (key == ' ') { this->space = true; }
 
@@ -134,18 +130,19 @@ public:
     int state;
     int texture;
     int x, y;
+    int shootAnimTimer;
     bool ready;
     bool ammo;
 
     void drawGun()
     {
-        glPointSize(8);
-        for (int y = 0;y < 32;y++)
+        glPointSize(4);
+        for (int y = 0;y < 64;y++)
         {
-            for (int x = 0;x < 32;x++)
+            for (int x = 0;x < 64;x++)
             {
-                //int pixel = (y * 32 + x) * 3;
-                int pixel = ((int)y * 32 + (int)x) * 3 + (this->texture * 32 * 32 * 3);
+                //int pixel = (y * 64 + x) * 3;
+                int pixel = ((int)y * 64 + (int)x) * 3 + (this->texture * 64 * 64 * 3);
                 int red = spritesTextures[pixel + 0];
                 int green = spritesTextures[pixel + 1];
                 int blue = spritesTextures[pixel + 2];
@@ -154,7 +151,7 @@ public:
                 {
                     glColor3ub(red, green, blue);
                     glBegin(GL_POINTS);
-                    glVertex2i(((this->x + this->anim) + x) * 8, ((this->y + this->anim / 16.0) + y) * 8);
+                    glVertex2i(((this->x + this->anim) + x) * 4, ((this->y + this->anim / 16.0) + y) * 4);
                     glEnd();
                 }
             }
@@ -205,6 +202,9 @@ public:
     {
         printf("shoot\n");
         shakeGun();
+        this->shootAnimTimer = 10;
+        this->texture = 4;
+        this->ready = false;
     }
 };
 PlayerGun gun;
@@ -247,8 +247,8 @@ bool spriteLogic(Sprite &sprite)
 
         break;
 
-        //case 2:
-        //    break;
+    case 2:
+        break;
     case 3:
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
@@ -301,16 +301,16 @@ void drawSprites()
                 if (scale < 0) { scale = 0; } if (scale > 120) { scale = 120; }
 
                 //texture
-                float t_x = 0, t_y = 31, t_x_step = 31.5 / (float)scale, t_y_step = 32.0 / (float)scale;
+                float t_x = 0, t_y = 63, t_x_step = 63.5 / (float)scale, t_y_step = 64 / (float)scale;
 
                 for (x = sx - scale / 2;x < sx + scale / 2;x++)
                 {
-                    t_y = 31;
+                    t_y = 63;
                     for (y = 0;y < scale;y++)
                     {
                         if (sp.state > 0 && x > 0 && x < 120 && b < depth[x])
                         {
-                            int pixel = ((int)t_y * 32 + (int)t_x) * 3 + (sp.texture * 32 * 32 * 3);
+                            int pixel = ((int)t_y * 64 + (int)t_x) * 3 + (sp.texture * 64 * 64 * 3);
                             int red = spritesTextures[pixel + 0];
                             int green = spritesTextures[pixel + 1];
                             int blue = spritesTextures[pixel + 2];
@@ -509,9 +509,9 @@ void init()
 
     //makeSprite2D(1, 1, 1, 15, 35);
 
-    gun.state = 1; gun.texture = 1; gun.type = 1; // info
-    gun.x = 45; gun.y = 55; gun.anim = 0; gun.animSpeed = 0.25; // position
-    gun.ammo = 10; gun.ready = true; // action
+    gun.state = 1; gun.texture = 3; gun.type = 1; // info
+    gun.x = 125; gun.y = 97; gun.anim = 0; gun.animSpeed = 0.25; // position
+    gun.ammo = 10; gun.ready = true; gun.shootAnimTimer = 0; // action
 
     sprites.clear();
 
@@ -572,6 +572,16 @@ void display()
         checkWin();
         shooting();
         gun.animateGun();
+
+        if (gun.shootAnimTimer > 0)
+        {
+            gun.shootAnimTimer -= 1;
+        }
+        else
+        {
+            gun.texture = 3;
+            gun.ready = true;
+        }
 
         // drawing
         drawSky();

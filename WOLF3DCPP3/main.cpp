@@ -26,9 +26,9 @@ float fade = 0;
 int mapW[] =
 {
  1,1,1,1,2,2,2,2,
- 4,0,0,1,0,0,0,2,
- 1,0,0,3,0,1,0,2,
- 1,1,3,1,0,0,0,2,
+ 5,0,0,1,0,0,0,2,
+ 1,0,0,4,0,1,0,2,
+ 1,1,4,1,0,0,0,2,
  2,0,0,0,0,0,0,1,
  2,0,0,0,0,1,0,1,
  2,0,0,0,0,0,0,1,
@@ -40,7 +40,7 @@ int mapF[] =
  0,0,0,0,0,0,0,0,
  0,0,0,0,1,1,1,0,
  0,0,0,0,1,0,1,0,
- 0,0,8,0,1,2,1,0,
+ 0,0,1,0,1,2,1,0,
  0,0,1,0,0,0,0,0,
  0,0,1,0,1,0,0,0,
  0,1,1,1,1,0,2,0,
@@ -71,7 +71,7 @@ class Player
 private:
     int health;
 public:
-    float px, py, pdx, pdy, pa;
+    float x, y, dx, dy, a;
 
     int damage(int dmg, DMG dmgType)
     {
@@ -102,13 +102,13 @@ public:
         if (key == 's') { this->s = true; }
         if (key == 'e' && MyKeys.white == true)
         {
-            int xo = 0; if (player.pdx < 0) { xo = -25; }
+            int xo = 0; if (player.dx < 0) { xo = -25; }
             else { xo = 25; }
-            int yo = 0; if (player.pdy < 0) { yo = -25; }
+            int yo = 0; if (player.dy < 0) { yo = -25; }
             else { yo = 25; }
-            int ipx = player.px / 64.0, ipx_add_xo = (player.px + xo) / 64.0;
-            int ipy = player.py / 64.0, ipy_add_yo = (player.py + yo) / 64.0;
-            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 3) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
+            int ipx = player.x / 64.0, ipx_add_xo = (player.x + xo) / 64.0;
+            int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0;
+            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
         }
         if (key == ' ') { this->space = true; }
 
@@ -134,12 +134,11 @@ public:
     int type;
     int state;
     int texture;
-    float x, y, z;
-    float dx, dy;
+    float x, y, z, a;
 
     void think() {}
 };
-vector < Sprite > sprites(32);
+vector < Sprite > sprites(64);
 int depth[120];
 
 class Bullet: public Sprite
@@ -150,21 +149,6 @@ public:
     float speed;
     DMG dmgType;
     TEAM owner;
-
-    void make(float x, float y, float a, DMG dmgType, TEAM owner)
-    {
-        this->type = 4; this->state = 1; this->texture = 1;
-        this->dmgType = dmgType;
-        this->owner = owner;
-
-        this->x = x; this->y = y; this->a = a;
-        this->dx = cos(degToRad(a)); this->dy = -sin(degToRad(a));
-    }
-
-    void think()
-    {
-        
-    }
 };
 
 class PlayerGun
@@ -256,18 +240,15 @@ public:
 
         Sprite tBullet;
         
-        tBullet.type = 4; tBullet.state = 1; tBullet.texture = 1;
+        tBullet.type = 4; tBullet.state = 1; tBullet.texture = 3;
 
-        tBullet.x = player.px;
-        tBullet.y = player.py;
+        tBullet.x = player.x; tBullet.y = player.y; tBullet.a = player.a;
         tBullet.z = 20;
-        tBullet.dx = player.pdx;
-        tBullet.dy = player.pdy;
-        /*tBullet.a = player.pa;
+        /*tBullet.a = player.a;
         tBullet.owner = TEAM_PLAYER;
         tBullet.dmgType = DMG_BULLET;*/
         
-        //tBullet.make(player.px, player.py, player.pa, DMG_BULLET, TEAM_PLAYER);
+        //tBullet.make(player.x, player.y, player.a, DMG_BULLET, TEAM_PLAYER);
         sprites.push_back(tBullet);
 
         //printf("%s \n", tBullet.type);
@@ -301,7 +282,7 @@ bool spriteLogic(Sprite &sprite)
 
     switch (sprite.type) {
     case 1:
-        if (player.px<sprite.x + 30 && player.px>sprite.x - 30 && player.py<sprite.y + 30 && player.py>sprite.y - 30)
+        if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
         {
             sprite.state = 0;
             MyKeys.white = true;
@@ -319,20 +300,48 @@ bool spriteLogic(Sprite &sprite)
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
         int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
-        if (sprite.x > player.px && mapW[spy * 8 + spx_sub] == 0) { sprite.x -= 0.04 * fps; }
-        if (sprite.x < player.px && mapW[spy * 8 + spx_add] == 0) { sprite.x += 0.04 * fps; }
-        if (sprite.y > player.py && mapW[spy_sub * 8 + spx] == 0) { sprite.y -= 0.04 * fps; }
-        if (sprite.y < player.py && mapW[spy_add * 8 + spx] == 0) { sprite.y += 0.04 * fps; }
+        if (sprite.x > player.x && mapW[spy * 8 + spx_sub] == 0) { sprite.x -= 0.04 * fps; }
+        if (sprite.x < player.x && mapW[spy * 8 + spx_add] == 0) { sprite.x += 0.04 * fps; }
+        if (sprite.y > player.y && mapW[spy_sub * 8 + spx] == 0) { sprite.y -= 0.04 * fps; }
+        if (sprite.y < player.y && mapW[spy_add * 8 + spx] == 0) { sprite.y += 0.04 * fps; }
 
-        if (player.px<sprite.x + 30 && player.px>sprite.x - 30 && player.py<sprite.y + 30 && player.py>sprite.y - 30)
+        if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
             gameState = 4;
 
         break;
     }
     case 4:
-        sprite.x += sprite.dx * 0.15 * fps;
-        sprite.y += sprite.dy * 0.15 * fps;
+    {
+        sprite.x += cos(degToRad(sprite.a)) * 0.15 * fps;
+        sprite.y += -sin(degToRad(sprite.a)) * 0.15 * fps;
+        int sw = mapW[xyToMap(sprite.x, sprite.y, mapX)];
+
+        if (sw > 0)
+        {
+            printf("bullet hit a wall\n");
+
+            sprite.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
+            break;
+        }
+
+        for (int spr = 0;spr < sprites.size();spr++)
+        {
+            Sprite& sp = sprites.at(spr);
+
+            if (sp.type == 3)
+            {
+                if (sprite.x<sp.x + 25 && sprite.x>sp.x - 25 && sprite.y<sp.y + 25 && sprite.y>sp.y - 25)
+                {
+                    printf("bullet hit an enemy\n");
+                    sprite.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
+                    sp.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
+                    break;
+                }
+            }
+        }
+
         break;
+    }
     default:
         break;
     }
@@ -347,7 +356,7 @@ void drawSprites()
         Sprite &sp = sprites.at(spr);
         int x, y, s;
 
-        if (sp.type == 0)
+        if ((sp.type == 0) || (sp.state == 0))
             continue;
 
         bool toRender = spriteLogic(sp);
@@ -358,11 +367,11 @@ void drawSprites()
         {
             for (s = 0;s < 4;s++)
             {
-                float sx = sp.x - player.px;
-                float sy = sp.y - player.py;
+                float sx = sp.x - player.x;
+                float sy = sp.y - player.y;
                 float sz = sp.z;
 
-                float CS = cos(degToRad(player.pa)), SN = sin(degToRad(player.pa));
+                float CS = cos(degToRad(player.a)), SN = sin(degToRad(player.a));
                 float a = sy * CS + sx * SN;
                 float b = sx * CS - sy * SN;
                 sx = a; sy = b;
@@ -445,7 +454,7 @@ void drawRays2D()
     int r, mx, my, mp, dof, side;
     float vx, vy, rx, ry, ra, xo, yo, disV, disH;
 
-    ra = FixAng(player.pa + 30);
+    ra = FixAng(player.a + 30);
 
     for (r = 0;r < 120;r++)
     {
@@ -453,14 +462,14 @@ void drawRays2D()
         //---Vertical--- 
         dof = 0; side = 0; disV = 100000;
         float Tan = tan(degToRad(ra));
-        if (cos(degToRad(ra)) > 0.001) { rx = (((int)player.px >> 6) << 6) + 64;      ry = (player.px - rx) * Tan + player.py; xo = 64; yo = -xo * Tan; }
-        else if (cos(degToRad(ra)) < -0.001) { rx = (((int)player.px >> 6) << 6) - 0.0001; ry = (player.px - rx) * Tan + player.py; xo = -64; yo = -xo * Tan; }
-        else { rx = player.px; ry = player.py; dof = 8; }
+        if (cos(degToRad(ra)) > 0.001) { rx = (((int)player.x >> 6) << 6) + 64;      ry = (player.x - rx) * Tan + player.y; xo = 64; yo = -xo * Tan; }
+        else if (cos(degToRad(ra)) < -0.001) { rx = (((int)player.x >> 6) << 6) - 0.0001; ry = (player.x - rx) * Tan + player.y; xo = -64; yo = -xo * Tan; }
+        else { rx = player.x; ry = player.y; dof = 8; }
 
         while (dof < 8)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.px) - sin(degToRad(ra)) * (ry - player.py); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
         vx = rx; vy = ry;
@@ -468,14 +477,14 @@ void drawRays2D()
         //---Horizontal---
         dof = 0; disH = 100000;
         Tan = 1.0 / Tan;
-        if (sin(degToRad(ra)) > 0.001) { ry = (((int)player.py >> 6) << 6) - 0.0001; rx = (player.py - ry) * Tan + player.px; yo = -64; xo = -yo * Tan; }
-        else if (sin(degToRad(ra)) < -0.001) { ry = (((int)player.py >> 6) << 6) + 64;      rx = (player.py - ry) * Tan + player.px; yo = 64; xo = -yo * Tan; }
-        else { rx = player.px; ry = player.py; dof = 8; }
+        if (sin(degToRad(ra)) > 0.001) { ry = (((int)player.y >> 6) << 6) - 0.0001; rx = (player.y - ry) * Tan + player.x; yo = -64; xo = -yo * Tan; }
+        else if (sin(degToRad(ra)) < -0.001) { ry = (((int)player.y >> 6) << 6) + 64;      rx = (player.y - ry) * Tan + player.x; yo = 64; xo = -yo * Tan; }
+        else { rx = player.x; ry = player.y; dof = 8; }
 
         while (dof < 8)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.px) - sin(degToRad(ra)) * (ry - player.py); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
 
@@ -483,7 +492,7 @@ void drawRays2D()
         glColor3f(0, 0.8, 0);
         if (disV < disH) { hmt = vmt; shade = 0.5; rx = vx; ry = vy; disH = disV; glColor3f(0, 0.6, 0); }
 
-        int ca = FixAng(player.pa - ra); disH = disH * cos(degToRad(ca));
+        int ca = FixAng(player.a - ra); disH = disH * cos(degToRad(ca));
         int lineH = (mapS * 640) / (disH);
         float ty_step = 32.0 / (float)lineH;
         float ty_off = 0;
@@ -510,9 +519,9 @@ void drawRays2D()
         //---draw floors---
         for (y = lineOff + lineH;y < 640;y++)
         {
-            float dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.pa - ra)));
-            tx = player.px / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
-            ty = player.py / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
+            float dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.a - ra)));
+            tx = player.x / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
+            ty = player.y / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
             int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
             int pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
             int red = AllTextures[pixel + 0] * 0.7;
@@ -540,7 +549,7 @@ void drawSky()
     {
         for (x = 0;x < 120;x++)
         {
-            int xo = (int)player.pa * 2 - x; if (xo < 0) { xo += 120; } xo = xo % 120;
+            int xo = (int)player.a * 2 - x; if (xo < 0) { xo += 120; } xo = xo % 120;
             int pixel = (y * 120 + xo) * 3;
             int red = sky[pixel + 0];
             int green = sky[pixel + 1];
@@ -575,8 +584,8 @@ void screen(int v)
 void init()
 {
     glClearColor(0.3, 0.3, 0.3, 0);
-    player.px = 150; player.py = 400; player.pa = 90;
-    player.pdx = cos(degToRad(player.pa)); player.pdy = -sin(degToRad(player.pa));
+    player.x = 150; player.y = 400; player.a = 90;
+    player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a));
     mapW[19] = 4; mapW[26] = 4;
     MyKeys.white = false;
 
@@ -588,10 +597,11 @@ void init()
 
     sprites.clear();
 
-    makeSprite(1, 1, 0, 1.5 * 64, 5 * 64, 20);
+    makeSprite(1, 1, 0, 4.5 * 64, 2 * 64, 20);
     makeSprite(2, 1, 1, 1.5 * 64, 4.5 * 64, 0);
     makeSprite(2, 1, 1, 3.5 * 64, 4.5 * 64, 0);
     makeSprite(3, 1, 2, 2.5 * 64, 2 * 64, 20);
+    makeSprite(3, 1, 2, 4.5 * 64, 2 * 64, 20);
     //sprites[0].type = 1; sprites[0].state = 1; sprites[0].texture = 0; sprites[0].x = 1.5 * 64; sprites[0].y = 5 * 64;   sprites[0].z = 20; //key
     //sprites[1].type = 2; sprites[1].state = 1; sprites[1].texture = 1; sprites[1].x = 1.5 * 64; sprites[1].y = 4.5 * 64; sprites[1].z = 0;  //light 1
     //sprites[2].type = 2; sprites[2].state = 1; sprites[2].texture = 1; sprites[2].x = 3.5 * 64; sprites[2].y = 4.5 * 64; sprites[2].z = 0;  //light 2
@@ -600,30 +610,30 @@ void init()
 
 void movement()
 {
-    if (Keys.a) { player.pa += 0.2 * fps; player.pa = FixAng(player.pa); player.pdx = cos(degToRad(player.pa));player.pdy = -sin(degToRad(player.pa)); }
-    if (Keys.d) { player.pa -= 0.2 * fps; player.pa = FixAng(player.pa); player.pdx = cos(degToRad(player.pa)); player.pdy = -sin(degToRad(player.pa)); }
+    if (Keys.a) { player.a += 0.2 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a));player.dy = -sin(degToRad(player.a)); }
+    if (Keys.d) { player.a -= 0.2 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a)); }
 
-    int xo = 0; if (player.pdx < 0) { xo = -20; }
+    int xo = 0; if (player.dx < 0) { xo = -20; }
     else { xo = 20; }
-    int yo = 0; if (player.pdy < 0) { yo = -20; }
+    int yo = 0; if (player.dy < 0) { yo = -20; }
     else { yo = 20; }
-    int ipx = player.px / 64.0, ipx_add_xo = (player.px + xo) / 64.0, ipx_sub_xo = (player.px - xo) / 64.0;
-    int ipy = player.py / 64.0, ipy_add_yo = (player.py + yo) / 64.0, ipy_sub_yo = (player.py - yo) / 64.0;
+    int ipx = player.x / 64.0, ipx_add_xo = (player.x + xo) / 64.0, ipx_sub_xo = (player.x - xo) / 64.0;
+    int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0, ipy_sub_yo = (player.y - yo) / 64.0;
     if (Keys.w)
     {
-        if (mapW[ipy * mapX + ipx_add_xo] == 0) { player.px += player.pdx * 0.2 * fps; }
-        if (mapW[ipy_add_yo * mapX + ipx] == 0) { player.py += player.pdy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_add_xo] == 0) { player.x += player.dx * 0.2 * fps; }
+        if (mapW[ipy_add_yo * mapX + ipx] == 0) { player.y += player.dy * 0.2 * fps; }
     }
     if (Keys.s)
     {
-        if (mapW[ipy * mapX + ipx_sub_xo] == 0) { player.px -= player.pdx * 0.2 * fps; }
-        if (mapW[ipy_sub_yo * mapX + ipx] == 0) { player.py -= player.pdy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_sub_xo] == 0) { player.x -= player.dx * 0.2 * fps; }
+        if (mapW[ipy_sub_yo * mapX + ipx] == 0) { player.y -= player.dy * 0.2 * fps; }
     }
 }
 
 void checkWin()
 {
-    if ((int)player.px >> 6 == 1 && (int)player.py >> 6 == 1)
+    if ((int)player.x >> 6 == 1 && (int)player.y >> 6 == 1)
     {
         fade = 0;
         timer = 0;

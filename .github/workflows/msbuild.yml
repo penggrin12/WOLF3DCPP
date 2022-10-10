@@ -1,0 +1,9 @@
+name: setup-msbuild
+run-name: Compiling
+on: [push]
+jobs:
+  check-bats-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: microsoft/setup-msbuild@v1.1
+      - run: msbuild WOLF3DCPP3\WOLF3DCPP3.csproj -t:rebuild -verbosity:diag -property:Configuration=Release

@@ -1,11 +1,13 @@
-#include <iostream>
+// libs
 #include <GL/glut.h>
-#include <math.h>
+#include <cmath>
 #include <vector>
 
+// .h
 #include "utils.h"
 #include "enums.h"
 
+// textures
 #include "Textures/AllTextures.ppm"
 #include "Textures/sky.ppm"
 #include "Textures/title.ppm"
@@ -62,7 +64,7 @@ int mapC[] =
 class PlayerKeys
 {
 public:
-    bool white = false;
+    bool white;
     bool red, blue, yellow, green;
 
     void reset()
@@ -97,8 +99,8 @@ class ButtonKeys
 public:
     bool w, a, d, s;
     bool space, lmb;
-    bool moving(void) { return ((w != 0) || (s != 0) || (a != 0) || (d != 0)); }
-    bool shooting(void) { return ((space) || (lmb)); }
+    bool moving(void) { return (w || s || a || d); }
+    bool shooting(void) { return (space || lmb); }
 
     void ButtonDown(unsigned char key, int x, int y)
     {
@@ -170,7 +172,7 @@ public:
     bool ready;
     bool ammo;
 
-    void drawGun()
+    void draw()
     {
         glPointSize(4);
         for (int y = 0;y < 64;y++)
@@ -194,8 +196,18 @@ public:
         }
     }
 
-    void animateGun()
+    void animate()
     {
+        if (this->shootAnimTimer > 0)
+        {
+            this->shootAnimTimer -= 1;
+        }
+        else
+        {
+            this->texture = 3;
+            this->ready = true;
+        }
+
         if (this->anim > 0.0)
         {
             if (this->anim > 3.0)
@@ -222,7 +234,7 @@ public:
         }
     }
 
-    void shakeGun()
+    void shake()
     {
         if (this->animSpeed > 0)
         {
@@ -259,7 +271,7 @@ public:
 
         //printf("%s \n", tBullet.type);
 
-        shakeGun();
+        shake();
 
         this->shootAnimTimer = 10;
         this->texture = 4;
@@ -686,23 +698,13 @@ void display()
         movement();
         checkWin();
         shooting();
-        gun.animateGun();
-
-        if (gun.shootAnimTimer > 0)
-        {
-            gun.shootAnimTimer -= 1;
-        }
-        else
-        {
-            gun.texture = 3;
-            gun.ready = true;
-        }
+        gun.animate();
 
         // drawing
         drawSky();
         drawRays2D();
         drawSprites();
-        gun.drawGun();
+        gun.draw();
     }
 
     if (gameState == 3) { screen(2); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameState = 0; } } // win

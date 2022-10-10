@@ -62,8 +62,14 @@ int mapC[] =
 class PlayerKeys
 {
 public:
-    bool white;
+    bool white = false;
     bool red, blue, yellow, green;
+
+    void reset()
+    {
+        white = false;
+        red = false, blue = false, yellow = false, green = false;
+    }
 };
 
 class Player
@@ -108,7 +114,7 @@ public:
             else { yo = 25; }
             int ipx = player.x / 64.0, ipx_add_xo = (player.x + xo) / 64.0;
             int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0;
-            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = 0; }
+            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = -4; }
         }
         if (key == ' ') { this->space = true; }
 
@@ -177,7 +183,7 @@ public:
                 int green = spritesTextures[pixel + 1];
                 int blue = spritesTextures[pixel + 2];
 
-                if (red != 255, green != 0, blue != 255)
+                if ((red != 255) || (green != 0) || (blue != 255))
                 {
                     glColor3ub(red, green, blue);
                     glBegin(GL_POINTS);
@@ -300,10 +306,10 @@ bool spriteLogic(Sprite &sprite)
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
         int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
-        if (sprite.x > player.x && mapW[spy * 8 + spx_sub] == 0) { sprite.x -= 0.04 * fps; }
-        if (sprite.x < player.x && mapW[spy * 8 + spx_add] == 0) { sprite.x += 0.04 * fps; }
-        if (sprite.y > player.y && mapW[spy_sub * 8 + spx] == 0) { sprite.y -= 0.04 * fps; }
-        if (sprite.y < player.y && mapW[spy_add * 8 + spx] == 0) { sprite.y += 0.04 * fps; }
+        if (sprite.x > player.x && mapW[spy * 8 + spx_sub] <= 0) { sprite.x -= 0.04 * fps; }
+        if (sprite.x < player.x && mapW[spy * 8 + spx_add] <= 0) { sprite.x += 0.04 * fps; }
+        if (sprite.y > player.y && mapW[spy_sub * 8 + spx] <= 0) { sprite.y -= 0.04 * fps; }
+        if (sprite.y < player.y && mapW[spy_add * 8 + spx] <= 0) { sprite.y += 0.04 * fps; }
 
         if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
             gameState = 4;
@@ -396,7 +402,7 @@ void drawSprites()
                             int red = spritesTextures[pixel + 0];
                             int green = spritesTextures[pixel + 1];
                             int blue = spritesTextures[pixel + 2];
-                            if (red != 255, green != 0, blue != 255) //dont draw if purple
+                            if ((red != 255) || (green != 0) || (blue != 255)) //dont draw if purple
                             {
                                 glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(x * 8, sy * 8 - y * 8); glEnd(); //draw point 
                             }
@@ -512,7 +518,11 @@ void drawRays2D()
             int red = AllTextures[pixel + 0] * shade;
             int green = AllTextures[pixel + 1] * shade;
             int blue = AllTextures[pixel + 2] * shade;
-            glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y + lineOff); glEnd();
+
+            if ((red != 255) || (green != 0) || (blue != 255))
+            {
+                glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y + lineOff); glEnd();
+            }
             ty += ty_step;
         }
 
@@ -530,12 +540,19 @@ void drawRays2D()
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y); glEnd();
 
             //---draw ceiling---
-            mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
-            pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
-            red = AllTextures[pixel + 0];
-            green = AllTextures[pixel + 1];
-            blue = AllTextures[pixel + 2];
-            if (mp > 0) { glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, 640 - y); glEnd(); }
+            if (mp > 0)
+            {
+                mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
+                pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
+                red = AllTextures[pixel + 0];
+                green = AllTextures[pixel + 1];
+                blue = AllTextures[pixel + 2];
+
+                if ((red != 255) || (green != 0) || (blue != 255))
+                {
+                    glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, 640 - y); glEnd();
+                }
+            }
         }
 
         ra = FixAng(ra - 0.5);
@@ -581,13 +598,27 @@ void screen(int v)
     if (fade > 1) { fade = 1; }
 }
 
+void mapReset()
+{
+    for (int mp = 0; mp < (mapX * mapY); mp++)
+    {
+        //int map = mapW[mp];
+        if (mapW[mp] < 0)
+        {
+            mapW[mp] += (-mapW[mp] * 2);
+            //printf("%s \n", mapW[mp]);
+        }
+    }
+}
+
 void init()
 {
     glClearColor(0.3, 0.3, 0.3, 0);
     player.x = 150; player.y = 400; player.a = 90;
     player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a));
-    mapW[19] = 4; mapW[26] = 4;
-    MyKeys.white = false;
+    //mapW[19] = 4; mapW[26] = 4;
+    MyKeys.reset();
+    mapReset();
 
     //makeSprite2D(1, 1, 1, 15, 35);
 
@@ -621,13 +652,13 @@ void movement()
     int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0, ipy_sub_yo = (player.y - yo) / 64.0;
     if (Keys.w)
     {
-        if (mapW[ipy * mapX + ipx_add_xo] == 0) { player.x += player.dx * 0.2 * fps; }
-        if (mapW[ipy_add_yo * mapX + ipx] == 0) { player.y += player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_add_xo] <= 0) { player.x += player.dx * 0.2 * fps; }
+        if (mapW[ipy_add_yo * mapX + ipx] <= 0) { player.y += player.dy * 0.2 * fps; }
     }
     if (Keys.s)
     {
-        if (mapW[ipy * mapX + ipx_sub_xo] == 0) { player.x -= player.dx * 0.2 * fps; }
-        if (mapW[ipy_sub_yo * mapX + ipx] == 0) { player.y -= player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapX + ipx_sub_xo] <= 0) { player.x -= player.dx * 0.2 * fps; }
+        if (mapW[ipy_sub_yo * mapX + ipx] <= 0) { player.y -= player.dy * 0.2 * fps; }
     }
 }
 

@@ -142,6 +142,7 @@ public:
     int type;
     int state;
     int texture;
+    float speed;
     float x, y, z, a;
 
     void think() {}
@@ -154,7 +155,6 @@ class Bullet: public Sprite
 public:
     float a;
     float dx, dy;
-    float speed;
     DMG dmgType;
     TEAM owner;
 };
@@ -260,8 +260,9 @@ public:
         
         tBullet.type = 4; tBullet.state = 1; tBullet.texture = 3;
 
+        tBullet.speed = 1.5;
         tBullet.x = player.x; tBullet.y = player.y; tBullet.a = player.a;
-        tBullet.z = 20;
+        tBullet.z = 20 + (int)(getRnd() / 900);
         /*tBullet.a = player.a;
         tBullet.owner = TEAM_PLAYER;
         tBullet.dmgType = DMG_BULLET;*/
@@ -273,7 +274,7 @@ public:
 
         shake();
 
-        this->shootAnimTimer = 10;
+        this->shootAnimTimer = 10 + (int)(getRnd() / 900);
         this->texture = 4;
         this->ready = false;
     }
@@ -330,9 +331,11 @@ bool spriteLogic(Sprite &sprite)
     }
     case 4:
     {
-        sprite.x += cos(degToRad(sprite.a)) * 0.15 * fps;
-        sprite.y += -sin(degToRad(sprite.a)) * 0.15 * fps;
+        sprite.x += cos(degToRad(sprite.a)) * sprite.speed * fps;
+        sprite.y += -sin(degToRad(sprite.a)) * sprite.speed * fps;
         int sw = mapW[xyToMap(sprite.x, sprite.y, mapX)];
+
+        toRender = false;
 
         if (sw > 0)
         {
@@ -518,6 +521,10 @@ void drawRays2D()
         int lineOff = 320 - (lineH >> 1);
 
         depth[r] = disH;
+
+        if (mapW[mp] < 0)
+            continue;
+
         //---draw walls---
         int y;
         float ty = ty_off * ty_step;
@@ -654,8 +661,8 @@ void init()
 
 void movement()
 {
-    if (Keys.a) { player.a += 0.2 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a));player.dy = -sin(degToRad(player.a)); }
-    if (Keys.d) { player.a -= 0.2 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a)); }
+    if (Keys.a) { player.a += 0.1 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a));player.dy = -sin(degToRad(player.a)); }
+    if (Keys.d) { player.a -= 0.1 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a)); }
 
     int xo = 0; if (player.dx < 0) { xo = -20; }
     else { xo = 20; }

@@ -519,7 +519,7 @@ void drawRays2D()
             int green = AllTextures[pixel + 1] * shade;
             int blue = AllTextures[pixel + 2] * shade;
 
-            if ((red != 255) || (green != 0) || (blue != 255))
+            if ((AllTextures[pixel + 0] != 255) || (AllTextures[pixel + 1] != 0) || (AllTextures[pixel + 2] != 255))
             {
                 glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y + lineOff); glEnd();
             }
@@ -539,10 +539,11 @@ void drawRays2D()
             int blue = AllTextures[pixel + 2] * 0.7;
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y); glEnd();
 
-            //---draw ceiling---
+            //---draw ceiling--- 
+            mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
+
             if (mp > 0)
             {
-                mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
                 pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
                 red = AllTextures[pixel + 0];
                 green = AllTextures[pixel + 1];

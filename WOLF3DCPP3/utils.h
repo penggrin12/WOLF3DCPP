@@ -15,6 +15,6 @@ const int rnd[256] = {887, 373, 472, 412, 312, 551, 647, 686, 682, 401, 569, 589
 28, 912, 230, 309, 29, 281, 732, 567, 750, 249, 869, 233, 244, 459, 900, 370};
 
 int getRnd() { rndIndex++; if (rndIndex >= 256) { rndIndex = 0; } return rnd[rndIndex]; }
-float FixAng(float a) { if (a > 359) { a -= 360; } if (a < 0) { a += 360; } return a; }
-float distance(float ax, float ay, float bx, float by, float ang) { return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay); }
+double FixAng(double a) { if (a > 359) { a -= 360; } if (a < 0) { a += 360; } return a; }
+double distance(double ax, double ay, double bx, double by, double ang) { return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay); }
 int xyToMap(int x, int y, int mapX) { int mx = (int)(x) >> 6; int my = (int)(y) >> 6; return my * mapX + mx; }

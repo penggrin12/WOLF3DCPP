@@ -1,3 +1,6 @@
+#pragma warning( disable : 4244 )
+#pragma warning( disable : 4305 )
+
 // libs
 #include <GL/freeglut.h>
 #include <cmath>
@@ -17,9 +20,9 @@
 
 using namespace std;
 
-float frame1, frame2, fps;
+int frame1, frame2, fps;
 int gameState = 0, timer = 0;
-float fade = 0;
+double fade = 0;
 
 #define mapX  8
 #define mapY  8
@@ -79,7 +82,7 @@ class Player
 private:
     int health;
 public:
-    float x, y, dx, dy, a;
+    double x, y, dx, dy, a;
 
     int damage(int dmg, DMG dmgType)
     {
@@ -142,8 +145,8 @@ public:
     int type;
     int state;
     int texture;
-    float speed;
-    float x, y, z, a;
+    double speed;
+    double x, y, z, a;
 
     void think() {}
 };
@@ -153,8 +156,8 @@ int depth[120];
 class Bullet: public Sprite
 {
 public:
-    float a;
-    float dx, dy;
+    double a;
+    double dx, dy;
     DMG dmgType;
     TEAM owner;
 };
@@ -162,8 +165,8 @@ public:
 class PlayerGun
 {
 public:
-    float anim;
-    float animSpeed;
+    double anim;
+    double animSpeed;
     int type;
     int state;
     int texture;
@@ -281,7 +284,7 @@ public:
 };
 PlayerGun gun;
 
-Sprite makeSprite(int type, int state, int texture, float x, float y, float z)
+Sprite makeSprite(int type, int state, int texture, double x, double y, double z)
 {
     Sprite tSprite;
     tSprite.type = type;
@@ -395,13 +398,13 @@ void drawSprites()
         {
             for (s = 0;s < 4;s++)
             {
-                float sx = sp.x - player.x;
-                float sy = sp.y - player.y;
-                float sz = sp.z;
+                double sx = sp.x - player.x;
+                double sy = sp.y - player.y;
+                double sz = sp.z;
 
-                float CS = cos(degToRad(player.a)), SN = sin(degToRad(player.a));
-                float a = sy * CS + sx * SN;
-                float b = sx * CS - sy * SN;
+                double CS = cos(degToRad(player.a)), SN = sin(degToRad(player.a));
+                double a = sy * CS + sx * SN;
+                double b = sx * CS - sy * SN;
                 sx = a; sy = b;
 
                 sx = (sx * 108.0 / sy) + (120 / 2);
@@ -411,7 +414,7 @@ void drawSprites()
                 if (scale < 0) { scale = 0; } if (scale > 120) { scale = 120; }
 
                 //texture
-                float t_x = 0, t_y = 63, t_x_step = 63.5 / (float)scale, t_y_step = 64 / (float)scale;
+                double t_x = 0, t_y = 63, t_x_step = 63.5 / (double)scale, t_y_step = 64 / (double)scale;
 
                 for (x = sx - scale / 2;x < sx + scale / 2;x++)
                 {
@@ -480,7 +483,7 @@ void shooting()
 void drawRays2D()
 {
     int r, mx, my, mp, dof, side;
-    float vx, vy, rx, ry, ra, xo, yo, disV, disH;
+    double vx, vy, rx, ry, ra, xo, yo, disV, disH;
 
     ra = FixAng(player.a + 30);
 
@@ -489,7 +492,7 @@ void drawRays2D()
         int vmt = 0, hmt = 0;
         //---Vertical--- 
         dof = 0; side = 0; disV = 100000;
-        float Tan = tan(degToRad(ra));
+        double Tan = tan(degToRad(ra));
         if (cos(degToRad(ra)) > 0.001) { rx = (((int)player.x >> 6) << 6) + 64;      ry = (player.x - rx) * Tan + player.y; xo = 64; yo = -xo * Tan; }
         else if (cos(degToRad(ra)) < -0.001) { rx = (((int)player.x >> 6) << 6) - 0.0001; ry = (player.x - rx) * Tan + player.y; xo = -64; yo = -xo * Tan; }
         else { rx = player.x; ry = player.y; dof = 8; }
@@ -516,14 +519,14 @@ void drawRays2D()
             else { rx += xo; ry += yo; dof += 1; }
         }
 
-        float shade = 1;
+        double shade = 1;
         glColor3f(0, 0.8, 0);
         if (disV < disH) { hmt = vmt; shade = 0.5; rx = vx; ry = vy; disH = disV; glColor3f(0, 0.6, 0); }
 
         int ca = FixAng(player.a - ra); disH = disH * cos(degToRad(ca));
         int lineH = (mapS * 640) / (disH);
-        float ty_step = 32.0 / (float)lineH;
-        float ty_off = 0;
+        double ty_step = 32.0 / (double)lineH;
+        double ty_off = 0;
         if (lineH > 640) { ty_off = (lineH - 640) / 2.0; lineH = 640; }
         int lineOff = 320 - (lineH >> 1);
 
@@ -534,8 +537,8 @@ void drawRays2D()
 
         //---draw walls---
         int y;
-        float ty = ty_off * ty_step;
-        float tx;
+        double ty = ty_off * ty_step;
+        double tx;
         if (shade == 1) { tx = (int)(rx / 2.0) % 32; if (ra > 180) { tx = 31 - tx; } }
         else { tx = (int)(ry / 2.0) % 32; if (ra > 90 && ra < 270) { tx = 31 - tx; } }
         for (y = 0;y < lineH;y++)
@@ -555,7 +558,7 @@ void drawRays2D()
         //---draw floors---
         for (y = lineOff + lineH;y < 640;y++)
         {
-            float dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.a - ra)));
+            double dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.a - ra)));
             tx = player.x / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
             ty = player.y / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
             int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;

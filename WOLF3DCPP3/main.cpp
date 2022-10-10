@@ -300,7 +300,7 @@ bool spriteLogic(Sprite &sprite)
     bool toRender = true;
 
     switch (sprite.type) {
-    case 1:
+    case 1: // key
         if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
         {
             sprite.state = 0;
@@ -312,9 +312,9 @@ bool spriteLogic(Sprite &sprite)
 
         break;
 
-    case 2:
+    case 2: // light
         break;
-    case 3:
+    case 3: // enemy
     {
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
@@ -329,7 +329,7 @@ bool spriteLogic(Sprite &sprite)
 
         break;
     }
-    case 4:
+    case 4: // bullet
     {
         sprite.x += cos(degToRad(sprite.a)) * sprite.speed * fps;
         sprite.y += -sin(degToRad(sprite.a)) * sprite.speed * fps;
@@ -349,13 +349,15 @@ bool spriteLogic(Sprite &sprite)
         {
             Sprite& sp = sprites.at(spr);
 
-            if (sp.type == 3)
+            if ((sp.type == 3) && (sp.state > 0))
             {
-                if (sprite.x<sp.x + 25 && sprite.x>sp.x - 25 && sprite.y<sp.y + 25 && sprite.y>sp.y - 25)
+                if (sprite.x<sp.x + 20 && sprite.x>sp.x - 20 && sprite.y<sp.y + 20 && sprite.y>sp.y - 20)
                 {
                     printf("bullet hit an enemy\n");
                     sprite.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
-                    sp.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
+                    sp.type = 0; sp.state = 0; // TODO: find a way to properly remove it
+                    makeSprite(5, 1, 2, sp.x, sp.y, sp.z);
+                    makeSprite(5, 1, 5, sp.x, sp.y, sp.z);
                     break;
                 }
             }
@@ -363,6 +365,8 @@ bool spriteLogic(Sprite &sprite)
 
         break;
     }
+    case 5: // gib
+        break;
     default:
         break;
     }
@@ -380,7 +384,10 @@ void drawSprites()
         if ((sp.type == 0) || (sp.state == 0))
             continue;
 
-        bool toRender = spriteLogic(sp);
+        bool toRender = true;
+
+        if (sp.state > 0)
+            toRender = spriteLogic(sp);
 
         //cout << sp.type << endl;
 

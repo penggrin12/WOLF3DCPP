@@ -1,4 +1,5 @@
 #pragma once
+#include "Textures/AllTextures.ppm"
 
 #define M_PI   3.1415926
 #define degToRad(angleInDegrees) ((angleInDegrees) * M_PI / 180.0)
@@ -18,3 +19,4 @@ int getRnd() { rndIndex++; if (rndIndex >= 256) { rndIndex = 0; } return rnd[rnd
 double FixAng(double a) { if (a > 359) { a -= 360; } if (a < 0) { a += 360; } return a; }
 double distance(double ax, double ay, double bx, double by, double ang) { return cos(degToRad(ang)) * (bx - ax) - sin(degToRad(ang)) * (by - ay); }
 int xyToMap(int x, int y, int mapX) { int mx = (int)(x) >> 6; int my = (int)(y) >> 6; return my * mapX + mx; }
+int getTexture(int index) { try { return AllTextures[index]; } catch (...) { return 0; } }

@@ -21,6 +21,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Textures", "Textures", "{4A
 		WOLF3DCPP3\Textures\won.ppm = WOLF3DCPP3\Textures\won.ppm
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Maps", "Maps", "{6602AA44-F29F-4199-859F-08D7549D5586}"
+	ProjectSection(SolutionItems) = preProject
+		WOLF3DCPP3\Maps\map0.wmap = WOLF3DCPP3\Maps\map0.wmap
+		WOLF3DCPP3\Maps\map1.wmap = WOLF3DCPP3\Maps\map1.wmap
+		WOLF3DCPP3\Maps\test1.wmap = WOLF3DCPP3\Maps\test1.wmap
+		WOLF3DCPP3\Maps\test2.wmap = WOLF3DCPP3\Maps\test2.wmap
+		WOLF3DCPP3\Maps\test3.wmap = WOLF3DCPP3\Maps\test3.wmap
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

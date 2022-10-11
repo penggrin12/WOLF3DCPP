@@ -11,12 +11,20 @@
 #include "enums.h"
 
 // textures
-#include "Textures/AllTextures.ppm"
+//#include "Textures/AllTextures.ppm"
 #include "Textures/sky.ppm"
 #include "Textures/title.ppm"
 #include "Textures/won.ppm"
 #include "Textures/lost.ppm"
 #include "Textures/sprites.ppm"
+
+// maps
+#include "Maps/map0.wmap"
+#include "Maps/map1.wmap"
+
+#include "Maps/test1.wmap"
+#include "Maps/test2.wmap"
+#include "Maps/test3.wmap"
 
 using namespace std;
 
@@ -24,10 +32,11 @@ int frame1, frame2, fps;
 int gameState = 0, timer = 0;
 double fade = 0;
 
-#define mapX  8
-#define mapY  8
+#define mapX 32
+#define mapY 32
 #define mapS 64
 
+/*
 int mapW[] =
 {
  1,1,1,1,2,2,2,2,
@@ -63,6 +72,15 @@ int mapC[] =
  0,0,1,0,0,0,0,0,
  0,0,0,0,0,0,0,0,
 };
+*/
+
+//int mapW[] = map0;
+//int mapF[] = map0;
+//int mapC[] = map0;
+
+#define mapW map1W
+#define mapF map1F
+#define mapC map1C
 
 class PlayerKeys
 {
@@ -322,10 +340,10 @@ bool spriteLogic(Sprite &sprite)
         int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
         int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
         int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
-        if (sprite.x > player.x && mapW[spy * 8 + spx_sub] <= 0) { sprite.x -= 0.04 * fps; }
-        if (sprite.x < player.x && mapW[spy * 8 + spx_add] <= 0) { sprite.x += 0.04 * fps; }
-        if (sprite.y > player.y && mapW[spy_sub * 8 + spx] <= 0) { sprite.y -= 0.04 * fps; }
-        if (sprite.y < player.y && mapW[spy_add * 8 + spx] <= 0) { sprite.y += 0.04 * fps; }
+        if (sprite.x > player.x && mapW[spy * mapX + spx_sub] <= 0) { sprite.x -= 0.04 * fps; }
+        if (sprite.x < player.x && mapW[spy * mapX + spx_add] <= 0) { sprite.x += 0.04 * fps; }
+        if (sprite.y > player.y && mapW[spy_sub * mapX + spx] <= 0) { sprite.y -= 0.04 * fps; }
+        if (sprite.y < player.y && mapW[spy_add * mapX + spx] <= 0) { sprite.y += 0.04 * fps; }
 
         if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
             gameState = 4;
@@ -495,12 +513,12 @@ void drawRays2D()
         double Tan = tan(degToRad(ra));
         if (cos(degToRad(ra)) > 0.001) { rx = (((int)player.x >> 6) << 6) + 64;      ry = (player.x - rx) * Tan + player.y; xo = 64; yo = -xo * Tan; }
         else if (cos(degToRad(ra)) < -0.001) { rx = (((int)player.x >> 6) << 6) - 0.0001; ry = (player.x - rx) * Tan + player.y; xo = -64; yo = -xo * Tan; }
-        else { rx = player.x; ry = player.y; dof = 8; }
+        else { rx = player.x; ry = player.y; dof = 16; }
 
-        while (dof < 8)
+        while (dof < 16)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 16; disV = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
         vx = rx; vy = ry;
@@ -510,12 +528,12 @@ void drawRays2D()
         Tan = 1.0 / Tan;
         if (sin(degToRad(ra)) > 0.001) { ry = (((int)player.y >> 6) << 6) - 0.0001; rx = (player.y - ry) * Tan + player.x; yo = -64; xo = -yo * Tan; }
         else if (sin(degToRad(ra)) < -0.001) { ry = (((int)player.y >> 6) << 6) + 64;      rx = (player.y - ry) * Tan + player.x; yo = 64; xo = -yo * Tan; }
-        else { rx = player.x; ry = player.y; dof = 8; }
+        else { rx = player.x; ry = player.y; dof = 16; }
 
-        while (dof < 8)
+        while (dof < 16)
         {
             mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
+            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 16; disH = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
 
@@ -544,11 +562,11 @@ void drawRays2D()
         for (y = 0;y < lineH;y++)
         {
             int pixel = ((int)ty * 32 + (int)tx) * 3 + (hmt * 32 * 32 * 3);
-            int red = AllTextures[pixel + 0] * shade;
-            int green = AllTextures[pixel + 1] * shade;
-            int blue = AllTextures[pixel + 2] * shade;
+            int red = getTexture(pixel + 0) * shade;
+            int green = getTexture(pixel + 1) * shade;
+            int blue = getTexture(pixel + 2) * shade;
 
-            if ((AllTextures[pixel + 0] != 255) || (AllTextures[pixel + 1] != 0) || (AllTextures[pixel + 2] != 255))
+            if ((getTexture(pixel + 0) != 255) || (getTexture(pixel + 1) != 0) || (getTexture(pixel + 2) != 255))
             {
                 glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y + lineOff); glEnd();
             }
@@ -563,9 +581,13 @@ void drawRays2D()
             ty = player.y / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
             int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
             int pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
-            int red = AllTextures[pixel + 0] * 0.7;
-            int green = AllTextures[pixel + 1] * 0.7;
-            int blue = AllTextures[pixel + 2] * 0.7;
+
+            if (mp < 0)
+                continue;
+
+            int red = getTexture(pixel + 0) * 0.7;
+            int green = getTexture(pixel + 1) * 0.7;
+            int blue = getTexture(pixel + 2) * 0.7;
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y); glEnd();
 
             //---draw ceiling--- 
@@ -574,9 +596,9 @@ void drawRays2D()
             if (mp > 0)
             {
                 pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
-                red = AllTextures[pixel + 0];
-                green = AllTextures[pixel + 1];
-                blue = AllTextures[pixel + 2];
+                red = getTexture(pixel + 0);
+                green = getTexture(pixel + 1);
+                blue = getTexture(pixel + 2);
 
                 if ((red != 255) || (green != 0) || (blue != 255))
                 {
@@ -644,7 +666,7 @@ void mapReset()
 void init()
 {
     glClearColor(0.3, 0.3, 0.3, 0);
-    player.x = 150; player.y = 400; player.a = 90;
+    player.x = 2.5 * mapS; player.y = 2.5 * mapS; player.a = -90;
     player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a));
     //mapW[19] = 4; mapW[26] = 4;
     MyKeys.reset();
@@ -658,11 +680,11 @@ void init()
 
     sprites.clear();
 
-    makeSprite(1, 1, 0, 4.5 * 64, 2 * 64, 20);
-    makeSprite(2, 1, 1, 1.5 * 64, 4.5 * 64, 0);
-    makeSprite(2, 1, 1, 3.5 * 64, 4.5 * 64, 0);
-    makeSprite(3, 1, 2, 2.5 * 64, 2 * 64, 20);
-    makeSprite(3, 1, 2, 4.5 * 64, 2 * 64, 20);
+    makeSprite(1, 1, 0, 4.5 * mapS, 2   * mapS, 20);
+    makeSprite(2, 1, 1, 1.5 * mapS, 4.5 * mapS, 0);
+    makeSprite(2, 1, 1, 5.5 * mapS, 2   * mapS, 0);
+    makeSprite(3, 1, 2, 4.5 * mapS, 2   * mapS, 20);
+    makeSprite(3, 1, 2, 4.5 * mapS, 2   * mapS, 20);
     //sprites[0].type = 1; sprites[0].state = 1; sprites[0].texture = 0; sprites[0].x = 1.5 * 64; sprites[0].y = 5 * 64;   sprites[0].z = 20; //key
     //sprites[1].type = 2; sprites[1].state = 1; sprites[1].texture = 1; sprites[1].x = 1.5 * 64; sprites[1].y = 4.5 * 64; sprites[1].z = 0;  //light 1
     //sprites[2].type = 2; sprites[2].state = 1; sprites[2].texture = 1; sprites[2].x = 3.5 * 64; sprites[2].y = 4.5 * 64; sprites[2].z = 0;  //light 2

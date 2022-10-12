@@ -24,11 +24,12 @@ int frame1, frame2, fps;
 int gameState = 0, timer = 0;
 double fade = 0;
 
-#define mapX  8
-#define mapY  8
+#define mapSS 8
+//#define mapSS  mapSS
+//#define mapSS  mapSS
 #define mapS 64
 
-int mapW[] =
+int mapW[mapSS * mapSS] =
 {
  1,1,1,1,2,2,2,2,
  5,0,0,1,0,0,0,2,
@@ -40,7 +41,7 @@ int mapW[] =
  1,1,1,1,1,1,1,1,
 };
 
-int mapF[] =
+int mapF[mapSS * mapSS] =
 {
  0,0,0,0,0,0,0,0,
  0,0,0,0,1,1,1,0,
@@ -52,7 +53,7 @@ int mapF[] =
  0,0,0,0,0,0,0,0,
 };
 
-int mapC[] =
+int mapC[mapSS * mapSS] =
 {
  0,0,0,0,0,0,0,0,
  0,0,0,0,0,0,0,0,
@@ -72,8 +73,8 @@ public:
 
     void reset()
     {
-        white = false;
-        red = false, blue = false, yellow = false, green = false;
+        this->white = false;
+        this->red = false, this->blue = false, this->yellow = false, this->green = false;
     }
 };
 
@@ -119,7 +120,7 @@ public:
             else { yo = 25; }
             int ipx = player.x / 64.0, ipx_add_xo = (player.x + xo) / 64.0;
             int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0;
-            if (mapW[ipy_add_yo * mapX + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapX + ipx_add_xo] = -4; }
+            if (mapW[ipy_add_yo * mapSS + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapSS + ipx_add_xo] = -4; }
         }
         if (key == ' ') { this->space = true; }
 
@@ -173,7 +174,7 @@ public:
     int x, y;
     int shootAnimTimer;
     bool ready;
-    bool ammo;
+    int ammo;
 
     void draw()
     {
@@ -336,7 +337,7 @@ bool spriteLogic(Sprite &sprite)
     {
         sprite.x += cos(degToRad(sprite.a)) * sprite.speed * fps;
         sprite.y += -sin(degToRad(sprite.a)) * sprite.speed * fps;
-        int sw = mapW[xyToMap(sprite.x, sprite.y, mapX)];
+        int sw = mapW[xyToMap(sprite.x, sprite.y, mapSS)];
 
         toRender = false;
 
@@ -499,8 +500,8 @@ void drawRays2D()
 
         while (dof < 8)
         {
-            mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
+            mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapSS + mx;
+            if (mp > 0 && mp < mapSS * mapSS && mapW[mp]>0) { vmt = mapW[mp] - 1; dof = 8; disV = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
         vx = rx; vy = ry;
@@ -514,8 +515,8 @@ void drawRays2D()
 
         while (dof < 8)
         {
-            mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapX + mx;
-            if (mp > 0 && mp < mapX * mapY && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
+            mx = (int)(rx) >> 6; my = (int)(ry) >> 6; mp = my * mapSS + mx;
+            if (mp > 0 && mp < mapSS * mapSS && mapW[mp]>0) { hmt = mapW[mp] - 1; dof = 8; disH = cos(degToRad(ra)) * (rx - player.x) - sin(degToRad(ra)) * (ry - player.y); }//hit         
             else { rx += xo; ry += yo; dof += 1; }
         }
 
@@ -561,7 +562,7 @@ void drawRays2D()
             double dy = y - (640 / 2.0), deg = degToRad(ra), raFix = cos(degToRad(FixAng(player.a - ra)));
             tx = player.x / 2 + cos(deg) * 158 * 2 * 32 / dy / raFix;
             ty = player.y / 2 - sin(deg) * 158 * 2 * 32 / dy / raFix;
-            int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
+            int mp = mapF[(int)(ty / 32.0) * mapSS + (int)(tx / 32.0)] * 32 * 32;
             int pixel = (((int)(ty) & 31) * 32 + ((int)(tx) & 31)) * 3 + mp * 3;
             int red = AllTextures[pixel + 0] * 0.7;
             int green = AllTextures[pixel + 1] * 0.7;
@@ -569,7 +570,7 @@ void drawRays2D()
             glPointSize(8); glColor3ub(red, green, blue); glBegin(GL_POINTS); glVertex2i(r * 8, y); glEnd();
 
             //---draw ceiling--- 
-            mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
+            mp = mapC[(int)(ty / 32.0) * mapSS + (int)(tx / 32.0)] * 32 * 32;
 
             if (mp > 0)
             {
@@ -630,7 +631,7 @@ void screen(int v)
 
 void mapReset()
 {
-    for (int mp = 0; mp < (mapX * mapY); mp++)
+    for (int mp = 0; mp < (mapSS * mapSS); mp++)
     {
         //int map = mapW[mp];
         if (mapW[mp] < 0)
@@ -682,13 +683,13 @@ void movement()
     int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0, ipy_sub_yo = (player.y - yo) / 64.0;
     if (Keys.w)
     {
-        if (mapW[ipy * mapX + ipx_add_xo] <= 0) { player.x += player.dx * 0.2 * fps; }
-        if (mapW[ipy_add_yo * mapX + ipx] <= 0) { player.y += player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapSS + ipx_add_xo] <= 0) { player.x += player.dx * 0.2 * fps; }
+        if (mapW[ipy_add_yo * mapSS + ipx] <= 0) { player.y += player.dy * 0.2 * fps; }
     }
     if (Keys.s)
     {
-        if (mapW[ipy * mapX + ipx_sub_xo] <= 0) { player.x -= player.dx * 0.2 * fps; }
-        if (mapW[ipy_sub_yo * mapX + ipx] <= 0) { player.y -= player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapSS + ipx_sub_xo] <= 0) { player.x -= player.dx * 0.2 * fps; }
+        if (mapW[ipy_sub_yo * mapSS + ipx] <= 0) { player.y -= player.dy * 0.2 * fps; }
     }
 }
 

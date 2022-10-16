@@ -1,12 +1,16 @@
-#pragma warning( disable : 4244 )
-#pragma warning( disable : 4305 )
+#pragma warning( disable : 4244  )
+#pragma warning( disable : 4305  )
+#pragma warning( disable : 6297  ) // 32-bit value shifted, then cast to 64-bit value. Results might not be an expected value.
+#pragma warning( disable : 26812 ) // The enum type 'XX' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
 
 // libs
 #include <GL/freeglut.h>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
 // .h
+#include "fontManager.h"
 #include "utils.h"
 #include "enums.h"
 
@@ -20,63 +24,70 @@
 
 using namespace std;
 
+FontManager fontManager;
+
 void makeSprite(int type, int state, int texture, double x, double y, double z);
 void makeSpriteNPC(int type, int state, int texture, int health, bool dead, double x, double y, double z);
 
 int frame1, frame2, fps;
-int timer = 0;
-double fade = 0;
+int timer = 0; // Timer
+double fade = 0; // Fading
 
-#define mapSS 8
-#define mapS 64
+#define mapSS 8 // x * x = Map size
+#define mapS 64 // Each individual block size (you probably dont want to change it)
 
+// Map walls
 int mapW[mapSS * mapSS] =
 {
- 1,1,1,1,2,2,2,2,
- 5,0,0,1,0,0,0,2,
- 1,0,0,4,0,1,0,2,
- 1,1,4,1,0,0,0,2,
- 2,0,0,0,0,0,0,1,
- 2,0,0,0,0,1,0,1,
- 2,0,0,0,0,0,0,1,
- 1,1,1,1,1,1,1,1,
+W_TI,W_TI,W_TI,W_TI,W_BR,W_BR,W_BR,W_BR,
+W_DE,W_NO,W_NO,W_TI,W_NO,W_NO,W_NO,W_BR,
+W_TI,W_NO,W_NO,W_DW,W_NO,W_TI,W_NO,W_BR,
+W_TI,W_TI,W_DW,W_TI,W_NO,W_NO,W_NO,W_BR,
+W_BR,W_NO,W_NO,W_NO,W_NO,W_NO,W_NO,W_TI,
+W_BR,W_NO,W_NO,W_NO,W_NO,W_TI,W_NO,W_TI,
+W_BR,W_NO,W_NO,W_NO,W_NO,W_NO,W_NO,W_TI,
+W_TI,W_TI,W_TI,W_TI,W_TI,W_TI,W_TI,W_TI,
 };
 
+// Map floor
 int mapF[mapSS * mapSS] =
 {
- 0,0,0,0,0,0,0,0,
- 0,0,0,0,1,1,1,0,
- 0,0,0,0,1,0,1,0,
- 0,0,1,0,1,2,1,0,
- 0,0,1,0,0,0,0,0,
- 0,0,1,0,1,0,0,0,
- 0,1,1,1,1,0,2,0,
- 0,0,0,0,0,0,0,0,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_BR,F_BR,F_BR,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_BR,F_TI,F_BR,F_TI,
+ F_TI,F_TI,F_BR,F_TI,F_BR,F_LV,F_BR,F_TI,
+ F_TI,F_TI,F_BR,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_BR,F_TI,F_BR,F_TI,F_TI,F_TI,
+ F_TI,F_BR,F_BR,F_BR,F_BR,F_TI,F_LV,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
 };
 
+// Map ceiling
 int mapC[mapSS * mapSS] =
 {
- 0,0,0,0,0,0,0,0,
- 0,0,0,0,0,0,0,0,
- 0,0,0,0,0,0,0,0,
- 0,0,0,0,0,0,0,0,
- 0,1,1,1,0,0,0,0,
- 0,0,1,0,0,0,0,0,
- 0,0,1,0,0,0,0,0,
- 0,0,0,0,0,0,0,0,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_BR,F_BR,F_BR,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_BR,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_BR,F_TI,F_TI,F_TI,F_TI,F_TI,
+ F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,F_TI,
 };
 
+// Game manager (eg: current game state)
 class GameManager
 {
 public:
     int gameState = 0;
 } gameManager;
 
+// Keys to the doors
 class PlayerKeys
 {
 public:
-    bool white;
-    bool red, blue, yellow, green;
+    bool white = false;
+    bool red = false, blue = false, yellow = false, green = false;
 
     void reset()
     {
@@ -85,38 +96,57 @@ public:
     }
 } MyKeys;
 
+// God-like entity, capable of destroying every living thing on their path
+// Controlled by a child
 class Player
 {
 private:
     int health = 100;
+    int damageTimer = 0;
     bool dead = false;
 public:
-    double x, y, dx, dy, a;
+    double x = 0, y = 0, dx = 0, dy = 0, a = 0;
 
-    int damage(int dmg, DMG dmgType)
+    void reset()
     {
-        if (this->health > 0)
+        this->health = 100; this->damageTimer = 0; this->dead = false;
+    }
+
+    int damage(int dmg, int reset, DMG dmgType)
+    {
+        if ((this->health > 0) && (this->damageTimer <= 0))
         {
             this->health -= dmg;
+            this->damageTimer = reset; // default: 30
         }
 
         if ((this->health <= 0) && (!this->dead))
         {
             this->dead = true;
         }
+
+        return this->health;
     }
 
-    bool isDead()
+    int damageTick()
     {
-        return this->dead;
+        if (this->damageTimer > 0)
+            this->damageTimer -= 1;
+
+        return this->damageTimer;
     }
+
+    int getHealth() { return this->health; }
+    bool isDead() { return this->dead; }
+    int standingOn() { return mapF[xyToMap(this->x, this->y, mapSS)]; }
 } player;
 
+// Buttons that player can press
 class ButtonKeys
 {
 public:
-    bool w, a, d, s;
-    bool space, lmb;
+    bool w = false, a = false, d = false, s = false;
+    bool space = false, lmb = false;
     bool moving(void) { return (w || s || a || d); }
     bool shooting(void) { return (space || lmb); }
 
@@ -134,7 +164,7 @@ public:
             else { yo = 25; }
             int ipx = player.x / 64.0, ipx_add_xo = (player.x + xo) / 64.0;
             int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0;
-            if (mapW[ipy_add_yo * mapSS + ipx_add_xo] == 4) { mapW[ipy_add_yo * mapSS + ipx_add_xo] = -4; }
+            if (mapW[ipy_add_yo * mapSS + ipx_add_xo] == W_DW) { mapW[ipy_add_yo * mapSS + ipx_add_xo] = -W_DW; }
         }
         if (key == ' ') { this->space = true; }
 
@@ -152,6 +182,7 @@ public:
     }
 } Keys;
 
+// 3D Sprite
 class Sprite
 {
 public:
@@ -169,6 +200,8 @@ public:
     bool think();
 };
 
+// Living and breathing Sprite
+// (Rarely used)
 class SpriteNPC : public Sprite
 {
 public:
@@ -190,33 +223,12 @@ public:
 
     bool think()
     {
-        bool toRender = true;
-
-        switch (this->type) {
-        case 3:
-            int spx = (int)this->x >> 6, spy = (int)this->y >> 6;
-            int spx_add = ((int)this->x + 15) >> 6, spy_add = ((int)this->y + 15) >> 6;
-            int spx_sub = ((int)this->x - 15) >> 6, spy_sub = ((int)this->y - 15) >> 6;
-
-            if (this->x > player.x && mapW[spy * 8 + spx_sub] <= 0) { this->x -= 0.04 * fps; }
-            if (this->x < player.x && mapW[spy * 8 + spx_add] <= 0) { this->x += 0.04 * fps; }
-            if (this->y > player.y && mapW[spy_sub * 8 + spx] <= 0) { this->y -= 0.04 * fps; }
-            if (this->y < player.y && mapW[spy_add * 8 + spx] <= 0) { this->y += 0.04 * fps; }
-
-            if (player.x<this->x + 30 && player.x>this->x - 30 && player.y<this->y + 30 && player.y>this->y - 30)
-                player.damage(3, DMG_MELEE);
-                //gameManager.gameState = 4;
-
-            if (this->dead)
-                this->remove();
-
-            break;
-        }
-
-        return toRender;
+        return true;
     }
 };
 
+// Basic projectile
+// TODO: Make a proper hitscan
 class Bullet : public Sprite
 {
 public:
@@ -226,13 +238,12 @@ public:
     TEAM owner;
 };
 
-//class Monster : public SpriteNPC
-//{
-//
-//};
+// 3D Sprites vector
+// Holds all of the on-scene sprites
 vector < Sprite > sprites(64);
 int depth[120];
 
+// Sprite thinking
 bool Sprite::think()
 {
     bool toRender = true;
@@ -252,8 +263,29 @@ bool Sprite::think()
 
     case 2: // light
         break;
-    case 3: // enemy
+    case 3: // enemy -- FIXME: move this to SpriteNPC::think() somehow
+    {
+        //cout << this->x << ", " << this->y << " -> ";
+
+        int spx = (int)this->x >> 6, spy = (int)this->y >> 6;
+        int spx_add = ((int)this->x + 15) >> 6, spy_add = ((int)this->y + 15) >> 6;
+        int spx_sub = ((int)this->x - 15) >> 6, spy_sub = ((int)this->y - 15) >> 6;
+
+        if (this->x > player.x && mapW[spy * 8 + spx_sub] <= W_NO) { this->x -= 0.04 * fps; }
+        if (this->x < player.x && mapW[spy * 8 + spx_add] <= W_NO) { this->x += 0.04 * fps; }
+        if (this->y > player.y && mapW[spy_sub * 8 + spx] <= W_NO) { this->y -= 0.04 * fps; }
+        if (this->y < player.y && mapW[spy_add * 8 + spx] <= W_NO) { this->y += 0.04 * fps; }
+
+        if (player.x<this->x + 30 && player.x>this->x - 30 && player.y<this->y + 30 && player.y>this->y - 30)
+            player.damage(6, 5, DMG_MELEE);
+
+        //cout << this->x << ", " << this->y << endl;
+
+        //if (this->dead)
+            //this->remove();
+
         break;
+    }
     case 4: // bullet
     {
         this->x += cos(degToRad(this->a)) * this->speed * fps;
@@ -301,6 +333,7 @@ bool Sprite::think()
     return toRender;
 }
 
+// Gun that player uses
 class PlayerGun
 {
 public:
@@ -422,6 +455,7 @@ public:
     }
 } gun;
 
+// Spawn a Sprite
 void makeSprite(int type, int state, int texture, double x, double y, double z)
 {
     Sprite tSprite;
@@ -435,6 +469,7 @@ void makeSprite(int type, int state, int texture, double x, double y, double z)
     sprites.push_back(tSprite);
 }
 
+// Spawn a SpriteNPC
 void makeSpriteNPC(int type, int state, int texture, int health, bool dead, double x, double y, double z)
 {
     SpriteNPC tSprite;
@@ -450,6 +485,8 @@ void makeSpriteNPC(int type, int state, int texture, int health, bool dead, doub
     sprites.push_back(tSprite);
 }
 
+// 3D sprites logic (eg: enemy movement)
+// TODO: Get rid of this completely and handle logic in Sprite
 bool spriteLogic(Sprite &sprite)
 {
     bool toRender = true;
@@ -459,6 +496,7 @@ bool spriteLogic(Sprite &sprite)
     return toRender;
 }
 
+// 3D sprites renderer
 void drawSprites()
 {
     for (int spr = 0;spr < sprites.size();spr++)
@@ -472,7 +510,8 @@ void drawSprites()
         bool toRender = true;
 
         if (sp.state > 0)
-            toRender = spriteLogic(sp);
+            toRender = sp.think();
+            //toRender = spriteLogic(sp);
 
         //cout << sp.type << endl;
 
@@ -554,6 +593,7 @@ void drawSprites2D()
 }
 */
 
+// Pre-Shooting checks
 void shooting()
 {
     if ((Keys.shooting()) && (gun.ready) && (gun.ammo > 0))
@@ -562,9 +602,10 @@ void shooting()
     }
 }
 
+// Main renderer
 void drawRays2D()
 {
-    int r, mx, my, mp, dof, side;
+    int r, mx, my, mp = xyToMap(1, 1, mapSS), dof, side;
     double vx, vy, rx, ry, ra, xo, yo, disV, disH;
 
     ra = FixAng(player.a + 30);
@@ -671,6 +712,7 @@ void drawRays2D()
     }
 }//-----------------------------------------------------------------------------
 
+// Draw the sky!
 void drawSky()
 {
     int x, y;
@@ -688,6 +730,7 @@ void drawSky()
     }
 }
 
+// 2D FULLSCREEN image
 void screen(int v)
 {
     int x, y;
@@ -710,6 +753,7 @@ void screen(int v)
     if (fade > 1) { fade = 1; }
 }
 
+// Reset the mess we did up earlier
 void mapReset()
 {
     for (int mp = 0; mp < (mapSS * mapSS); mp++)
@@ -723,11 +767,13 @@ void mapReset()
     }
 }
 
+// How the things are done on the start and restart
 void init()
 {
     glClearColor(0.3, 0.3, 0.3, 0);
     player.x = 150; player.y = 400; player.a = 90;
     player.dx = cos(degToRad(player.a)); player.dy = -sin(degToRad(player.a));
+    player.reset();
     //mapW[19] = 4; mapW[26] = 4;
     MyKeys.reset();
     mapReset();
@@ -751,6 +797,8 @@ void init()
     //sprites[3].type = 3; sprites[3].state = 1; sprites[3].texture = 2; sprites[3].x = 2.5 * 64; sprites[3].y = 2 * 64;   sprites[3].z = 20; //enemy
 }
 
+// Handle player movement
+// TODO: move this to Player
 void movement()
 {
     if (Keys.a) { player.a += 0.1 * fps; player.a = FixAng(player.a); player.dx = cos(degToRad(player.a));player.dy = -sin(degToRad(player.a)); }
@@ -764,16 +812,27 @@ void movement()
     int ipy = player.y / 64.0, ipy_add_yo = (player.y + yo) / 64.0, ipy_sub_yo = (player.y - yo) / 64.0;
     if (Keys.w)
     {
-        if (mapW[ipy * mapSS + ipx_add_xo] <= 0) { player.x += player.dx * 0.2 * fps; }
-        if (mapW[ipy_add_yo * mapSS + ipx] <= 0) { player.y += player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapSS + ipx_add_xo] <= W_NO) { player.x += player.dx * 0.2 * fps; }
+        if (mapW[ipy_add_yo * mapSS + ipx] <= W_NO) { player.y += player.dy * 0.2 * fps; }
     }
     if (Keys.s)
     {
-        if (mapW[ipy * mapSS + ipx_sub_xo] <= 0) { player.x -= player.dx * 0.2 * fps; }
-        if (mapW[ipy_sub_yo * mapSS + ipx] <= 0) { player.y -= player.dy * 0.2 * fps; }
+        if (mapW[ipy * mapSS + ipx_sub_xo] <= W_NO) { player.x -= player.dx * 0.2 * fps; }
+        if (mapW[ipy_sub_yo * mapSS + ipx] <= W_NO) { player.y -= player.dy * 0.2 * fps; }
     }
 }
 
+// Handle dangerous floors like lava
+void dangerFloor()
+{
+    //cout << xyToMap(player.x, player.y, mapSS) << endl;
+    if (player.standingOn() == F_LV) // lava
+    {
+        player.damage(6, 25, DMG_LAVA);
+    }
+}
+
+// Check if we are in the golden spot
 void checkWin()
 {
     if ((int)player.x >> 6 == 1 && (int)player.y >> 6 == 1)
@@ -784,6 +843,7 @@ void checkWin()
     }
 }
 
+// Main loop
 void display()
 {
     frame2 = glutGet(GLUT_ELAPSED_TIME); fps = (frame2 - frame1); frame1 = glutGet(GLUT_ELAPSED_TIME);
@@ -796,14 +856,27 @@ void display()
         // game logic
         movement();
         checkWin();
+        dangerFloor();
+        player.damageTick();
         shooting();
         gun.animate();
+
+        if (player.isDead())
+            gameManager.gameState = 4; // loose on death
 
         // drawing
         drawSky();
         drawRays2D();
         drawSprites();
         gun.draw();
+        fontManager.renderValue(player.getHealth(), 9, 15, 5);
+
+        fontManager.renderValue(player.x, 9, 15, 15);
+        fontManager.renderValue(player.y, 9, 15, 25);
+        fontManager.renderValue(xyToMap(player.x, player.y, mapSS), 9, 15, 35);
+        //fontManager.renderNumber(2, 50, 50);
+        //fontManager.renderNumber(4, 20, 10);
+        //fontManager.renderNumber(6, 30, 10);
     }
 
     if (gameManager.gameState == 3) { screen(2); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameManager.gameState = 0; } } // win
@@ -813,13 +886,17 @@ void display()
     glutSwapBuffers();
 }
 
+// Resize the window
 void resize(int w, int h) { glutReshapeWindow(960, 640); }
 
 // FIXME: avoid this?
 void ButtonDown(unsigned char key, int x, int y) { Keys.ButtonDown(key, x, y); }
 
+// FIXME: avoid this?
 void ButtonUp(unsigned char key, int x, int y) { Keys.ButtonUp(key, x, y); }
 
+// Entry point
+// Use init() instead
 int main(int argc, char* argv[])
 {
     glutInit(&argc, argv);
@@ -834,5 +911,7 @@ int main(int argc, char* argv[])
     glutKeyboardFunc(&ButtonDown);
     glutKeyboardUpFunc(&ButtonUp);
     glutMainLoop();
+
+    return 0;
 }
 

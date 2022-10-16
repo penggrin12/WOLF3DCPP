@@ -20,13 +20,14 @@
 
 using namespace std;
 
+void makeSprite(int type, int state, int texture, double x, double y, double z);
+void makeSpriteNPC(int type, int state, int texture, int health, bool dead, double x, double y, double z);
+
 int frame1, frame2, fps;
-int gameState = 0, timer = 0;
+int timer = 0;
 double fade = 0;
 
 #define mapSS 8
-//#define mapSS  mapSS
-//#define mapSS  mapSS
 #define mapS 64
 
 int mapW[mapSS * mapSS] =
@@ -65,6 +66,12 @@ int mapC[mapSS * mapSS] =
  0,0,0,0,0,0,0,0,
 };
 
+class GameManager
+{
+public:
+    int gameState = 0;
+} gameManager;
+
 class PlayerKeys
 {
 public:
@@ -76,12 +83,13 @@ public:
         this->white = false;
         this->red = false, this->blue = false, this->yellow = false, this->green = false;
     }
-};
+} MyKeys;
 
 class Player
 {
 private:
-    int health;
+    int health = 100;
+    bool dead = false;
 public:
     double x, y, dx, dy, a;
 
@@ -89,14 +97,20 @@ public:
     {
         if (this->health > 0)
         {
-            // TODO: death
-            gameState = 4;
+            this->health -= dmg;
+        }
+
+        if ((this->health <= 0) && (!this->dead))
+        {
+            this->dead = true;
         }
     }
-};
 
-PlayerKeys MyKeys;
-Player player;
+    bool isDead()
+    {
+        return this->dead;
+    }
+} player;
 
 class ButtonKeys
 {
@@ -136,9 +150,7 @@ public:
         if (key == ' ') { this->space = false; }
         glutPostRedisplay();
     }
-};
-
-ButtonKeys Keys;
+} Keys;
 
 class Sprite
 {
@@ -149,12 +161,63 @@ public:
     double speed;
     double x, y, z, a;
 
-    void think() {}
-};
-vector < Sprite > sprites(64);
-int depth[120];
+    void remove()
+    {
+        this->type = 0; this->state = 0;
+    }
 
-class Bullet: public Sprite
+    bool think();
+};
+
+class SpriteNPC : public Sprite
+{
+public:
+    int health;
+    bool dead;
+
+    int damage(int dmg, DMG dmgType)
+    {
+        if (this->health > 0)
+        {
+            this->health -= dmg;
+        }
+
+        if ((this->health <= 0) && (!this->dead))
+        {
+            this->dead = true;
+        }
+    }
+
+    bool think()
+    {
+        bool toRender = true;
+
+        switch (this->type) {
+        case 3:
+            int spx = (int)this->x >> 6, spy = (int)this->y >> 6;
+            int spx_add = ((int)this->x + 15) >> 6, spy_add = ((int)this->y + 15) >> 6;
+            int spx_sub = ((int)this->x - 15) >> 6, spy_sub = ((int)this->y - 15) >> 6;
+
+            if (this->x > player.x && mapW[spy * 8 + spx_sub] <= 0) { this->x -= 0.04 * fps; }
+            if (this->x < player.x && mapW[spy * 8 + spx_add] <= 0) { this->x += 0.04 * fps; }
+            if (this->y > player.y && mapW[spy_sub * 8 + spx] <= 0) { this->y -= 0.04 * fps; }
+            if (this->y < player.y && mapW[spy_add * 8 + spx] <= 0) { this->y += 0.04 * fps; }
+
+            if (player.x<this->x + 30 && player.x>this->x - 30 && player.y<this->y + 30 && player.y>this->y - 30)
+                player.damage(3, DMG_MELEE);
+                //gameManager.gameState = 4;
+
+            if (this->dead)
+                this->remove();
+
+            break;
+        }
+
+        return toRender;
+    }
+};
+
+class Bullet : public Sprite
 {
 public:
     double a;
@@ -162,6 +225,81 @@ public:
     DMG dmgType;
     TEAM owner;
 };
+
+//class Monster : public SpriteNPC
+//{
+//
+//};
+vector < Sprite > sprites(64);
+int depth[120];
+
+bool Sprite::think()
+{
+    bool toRender = true;
+
+    switch (this->type) {
+    case 1: // key
+        if (player.x<this->x + 30 && player.x>this->x - 30 && player.y<this->y + 30 && player.y>this->y - 30)
+        {
+            this->state = 0;
+            MyKeys.white = true;
+        }
+
+        if (this->state == 0)
+            toRender = false;
+
+        break;
+
+    case 2: // light
+        break;
+    case 3: // enemy
+        break;
+    case 4: // bullet
+    {
+        this->x += cos(degToRad(this->a)) * this->speed * fps;
+        this->y += -sin(degToRad(this->a)) * this->speed * fps;
+        int sw = mapW[xyToMap(this->x, this->y, mapSS)];
+
+        toRender = false;
+
+        if (sw > 0)
+        {
+            printf("bullet hit a wall\n");
+
+            this->remove();
+            break;
+        }
+
+        for (int spr = 0;spr < sprites.size();spr++)
+        {
+            Sprite& sp = sprites.at(spr);
+
+            if ((sp.type == 3) && (sp.state > 0))
+            {
+                if (this->x<sp.x + 20 && this->x>sp.x - 20 && this->y<sp.y + 20 && this->y>sp.y - 20)
+                {
+                    printf("bullet hit an enemy\n");
+                    this->remove();
+                    
+                    sp.remove(); //FIXME: somehow use sp.damage() instead
+
+                    makeSprite(5, 1, 2, sp.x, sp.y, sp.z);
+                    makeSprite(5, 1, 5, sp.x, sp.y, sp.z);
+                    break;
+                }
+            }
+        }
+
+        break;
+    }
+    case 5: // gib
+        break;
+    default:
+        break;
+    }
+
+    return toRender;
+}
 
 class PlayerGun
 {
@@ -282,10 +420,9 @@ public:
         this->texture = 4;
         this->ready = false;
     }
-};
-PlayerGun gun;
+} gun;
 
-Sprite makeSprite(int type, int state, int texture, double x, double y, double z)
+void makeSprite(int type, int state, int texture, double x, double y, double z)
 {
     Sprite tSprite;
     tSprite.type = type;
@@ -296,84 +433,28 @@ Sprite makeSprite(int type, int state, int texture, double x, double y, double z
     tSprite.z = z;
 
     sprites.push_back(tSprite);
-    return sprites.back();
+}
+
+void makeSpriteNPC(int type, int state, int texture, int health, bool dead, double x, double y, double z)
+{
+    SpriteNPC tSprite;
+    tSprite.type = type;
+    tSprite.state = state;
+    tSprite.texture = texture;
+    tSprite.health = health;
+    tSprite.dead = dead;
+    tSprite.x = x;
+    tSprite.y = y;
+    tSprite.z = z;
+
+    sprites.push_back(tSprite);
 }
 
 bool spriteLogic(Sprite &sprite)
 {
     bool toRender = true;
 
-    switch (sprite.type) {
-    case 1: // key
-        if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
-        {
-            sprite.state = 0;
-            MyKeys.white = true;
-        }
-
-        if (sprite.state == 0)
-            toRender = false;
-
-        break;
-
-    case 2: // light
-        break;
-    case 3: // enemy
-    {
-        int spx = (int)sprite.x >> 6, spy = (int)sprite.y >> 6;
-        int spx_add = ((int)sprite.x + 15) >> 6, spy_add = ((int)sprite.y + 15) >> 6;
-        int spx_sub = ((int)sprite.x - 15) >> 6, spy_sub = ((int)sprite.y - 15) >> 6;
-        if (sprite.x > player.x && mapW[spy * 8 + spx_sub] <= 0) { sprite.x -= 0.04 * fps; }
-        if (sprite.x < player.x && mapW[spy * 8 + spx_add] <= 0) { sprite.x += 0.04 * fps; }
-        if (sprite.y > player.y && mapW[spy_sub * 8 + spx] <= 0) { sprite.y -= 0.04 * fps; }
-        if (sprite.y < player.y && mapW[spy_add * 8 + spx] <= 0) { sprite.y += 0.04 * fps; }
-
-        if (player.x<sprite.x + 30 && player.x>sprite.x - 30 && player.y<sprite.y + 30 && player.y>sprite.y - 30)
-            gameState = 4;
-
-        break;
-    }
-    case 4: // bullet
-    {
-        sprite.x += cos(degToRad(sprite.a)) * sprite.speed * fps;
-        sprite.y += -sin(degToRad(sprite.a)) * sprite.speed * fps;
-        int sw = mapW[xyToMap(sprite.x, sprite.y, mapSS)];
-
-        toRender = false;
-
-        if (sw > 0)
-        {
-            printf("bullet hit a wall\n");
-
-            sprite.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
-            break;
-        }
-
-        for (int spr = 0;spr < sprites.size();spr++)
-        {
-            Sprite& sp = sprites.at(spr);
-
-            if ((sp.type == 3) && (sp.state > 0))
-            {
-                if (sprite.x<sp.x + 20 && sprite.x>sp.x - 20 && sprite.y<sp.y + 20 && sprite.y>sp.y - 20)
-                {
-                    printf("bullet hit an enemy\n");
-                    sprite.type = 0; sprite.state = 0; // TODO: find a way to properly remove it
-                    sp.type = 0; sp.state = 0; // TODO: find a way to properly remove it
-                    makeSprite(5, 1, 2, sp.x, sp.y, sp.z);
-                    makeSprite(5, 1, 5, sp.x, sp.y, sp.z);
-                    break;
-                }
-            }
-        }
-
-        break;
-    }
-    case 5: // gib
-        break;
-    default:
-        break;
-    }
+    toRender = sprite.think();
 
     return toRender;
 }
@@ -662,8 +743,8 @@ void init()
     makeSprite(1, 1, 0, 4.5 * 64, 2 * 64, 20);
     makeSprite(2, 1, 1, 1.5 * 64, 4.5 * 64, 0);
     makeSprite(2, 1, 1, 3.5 * 64, 4.5 * 64, 0);
-    makeSprite(3, 1, 2, 2.5 * 64, 2 * 64, 20);
-    makeSprite(3, 1, 2, 4.5 * 64, 2 * 64, 20);
+    makeSpriteNPC(3, 1, 2, 35, false, 2.5 * 64, 2 * 64, 20);
+    makeSpriteNPC(3, 1, 2, 35, false, 4.5 * 64, 2 * 64, 20);
     //sprites[0].type = 1; sprites[0].state = 1; sprites[0].texture = 0; sprites[0].x = 1.5 * 64; sprites[0].y = 5 * 64;   sprites[0].z = 20; //key
     //sprites[1].type = 2; sprites[1].state = 1; sprites[1].texture = 1; sprites[1].x = 1.5 * 64; sprites[1].y = 4.5 * 64; sprites[1].z = 0;  //light 1
     //sprites[2].type = 2; sprites[2].state = 1; sprites[2].texture = 1; sprites[2].x = 3.5 * 64; sprites[2].y = 4.5 * 64; sprites[2].z = 0;  //light 2
@@ -699,7 +780,7 @@ void checkWin()
     {
         fade = 0;
         timer = 0;
-        gameState = 3;
+        gameManager.gameState = 3;
     }
 }
 
@@ -708,9 +789,9 @@ void display()
     frame2 = glutGet(GLUT_ELAPSED_TIME); fps = (frame2 - frame1); frame1 = glutGet(GLUT_ELAPSED_TIME);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (gameState == 0) { init(); fade = 0; timer = 0; gameState = 1; } // init
-    if (gameState == 1) { screen(1); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameState = 2; } } // menu
-    if (gameState == 2) // In-Game
+    if (gameManager.gameState == 0) { init(); fade = 0; timer = 0; gameManager.gameState = 1; } // init
+    if (gameManager.gameState == 1) { screen(1); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameManager.gameState = 2; } } // menu
+    if (gameManager.gameState == 2) // In-Game
     {
         // game logic
         movement();
@@ -725,8 +806,8 @@ void display()
         gun.draw();
     }
 
-    if (gameState == 3) { screen(2); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameState = 0; } } // win
-    if (gameState == 4) { screen(3); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameState = 0; } } // loose
+    if (gameManager.gameState == 3) { screen(2); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameManager.gameState = 0; } } // win
+    if (gameManager.gameState == 4) { screen(3); timer += 1 * fps; if (timer > 2000) { fade = 0; timer = 0; gameManager.gameState = 0; } } // loose
 
     glutPostRedisplay();
     glutSwapBuffers();
